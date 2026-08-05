@@ -1,0 +1,15 @@
+{
+  "clientId": "demo",
+  "displayName": "DaCodaHub Demo",
+  "android": {
+    "applicationId": "com.dacodahub.whitelabel.demo",
+    "namespace": "com.whitelabelapp",
+    "deepLinkScheme": "dacodahubdemo"
+  },
+  "ios": {
+    "bundleIdentifier": "com.dacodahub.whitelabel.demo",
+    "targetName": "DaCodaHubDemo",
+    "schemeName": "DaCodaHubDemo",
+    "deepLinkScheme": "dacodahubdemo"
+  }
+}

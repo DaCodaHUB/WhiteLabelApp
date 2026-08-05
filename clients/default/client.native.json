@@ -1,0 +1,15 @@
+{
+  "clientId": "default",
+  "displayName": "WhiteLabelApp",
+  "android": {
+    "applicationId": "com.whitelabelapp",
+    "namespace": "com.whitelabelapp",
+    "deepLinkScheme": "whitelabelapp"
+  },
+  "ios": {
+    "bundleIdentifier": "com.whitelabelapp",
+    "targetName": "WhiteLabelApp",
+    "schemeName": "WhiteLabelApp",
+    "deepLinkScheme": "whitelabelapp"
+  }
+}
