@@ -98,7 +98,7 @@ To add an action type, extend the `HomeAction` union, configuration validation, 
 
 The shell provides initial loading feedback, a navigation progress bar, main-frame and renderer failure recovery, retry, new-window policy enforcement, and Android hardware-back history. Android back first calls WebView history and falls through to React Navigation when no web history exists. External-launch deduplication prevents repeated WebView callbacks from opening the same target concurrently.
 
-Session and security choices are deliberate: DOM storage, normal caching, shared iOS cookies, and Android third-party cookies are enabled for common authenticated website flows. This means website cookies follow platform WebView persistence and privacy behavior; the app never reads or stores raw cookies itself. Incognito is off, mixed content and file URL access are disabled, media requires user action, no JavaScript is injected, no native bridge exists, and WebView debugging is enabled only in development builds.
+Session and security choices are deliberate: DOM storage, normal caching, shared iOS cookies, and Android third-party cookies are enabled for common authenticated website flows. This means website cookies follow platform WebView persistence and privacy behavior; the app never reads or stores raw cookies itself. Incognito is off, mixed content and file URL access are disabled, media requires user action, and WebView debugging is enabled only in development builds. A small main-frame script is injected only when the optional website bridge is enabled.
 
 Native pull-to-refresh is enabled on iOS, where the installed WebView exposes top-aware refresh behavior. Android retains normal webpage scrolling because this WebView release has no equivalent conflict-free native prop and no refresh dependency was added. Retry remains available after failures on both platforms. Proactive offline detection is deferred because NetInfo is not installed; failed main-frame loads show connection guidance without treating subresource failures as offline state.
 
@@ -191,14 +191,14 @@ webBridge: {
 
 Version 1 supports `openPhone`, `openEmail`, `openMap`, `openExternal`, `share`, `openNative`, `identifyNotificationUser`, and `clearNotificationUser`. Each type must also pass its relevant feature flag. Native destinations use the typed destination mapping and cannot contain arbitrary React Navigation route names. External and map URLs require HTTPS.
 
-Messages are processed only while the current main-frame page is HTTPS and belongs to `website.allowedDomains`. `about:blank`, malformed URLs, external pages, disabled bridges, and unlisted types are rejected. Unknown JSON fields are tolerated for forward-compatible website clients, but every recognized field is type-checked and length-bounded. Raw messages and native errors are neither persisted nor returned.
+Messages are processed only while the current main-frame page is HTTPS and belongs to `website.allowedDomains`. A native-generated, per-WebView capability is installed only in the main frame through `window.WhiteLabelBridge`; raw `window.ReactNativeWebView.postMessage` calls, including calls from embedded frames, cannot invoke privileged actions. The reported message URL is checked as an additional restriction, but is not treated as proof of frame identity because Android WebView implementations differ. `about:blank`, malformed URLs, external pages, disabled bridges, and unlisted types are rejected. Unknown JSON fields are tolerated for forward-compatible website clients, but every recognized field is type-checked and length-bounded. Raw messages and native errors are neither persisted nor returned. A business must trust scripts running in its own top-level page; the bridge cannot distinguish a compromised same-origin script from the business's script.
 
 Website code may use the following pattern while retaining its normal browser fallback:
 
 ```js
 function sendAppMessage(message) {
-  if (!window.ReactNativeWebView) return false;
-  window.ReactNativeWebView.postMessage(JSON.stringify({version: 1, ...message}));
+  if (!window.WhiteLabelBridge) return false;
+  window.WhiteLabelBridge.postMessage(JSON.stringify({version: 1, ...message}));
   return true;
 }
 
@@ -219,7 +219,7 @@ Responses are JSON-serialized with executable-context escaping and never include
 
 Notification identity calls only connect an application user identifier to the already-initialized notification SDK. They require notifications to be enabled, reject email-shaped identifiers, and are not proof of authentication. The website must send a stable, non-secret ID only after its own successful authentication.
 
-The bridge does not expose evaluation, storage, files, device identifiers, clipboard, contacts, cameras, unrestricted navigation, or arbitrary native functions. No bridge script is injected: `react-native-webview` provides `window.ReactNativeWebView.postMessage` itself.
+The bridge does not expose evaluation, storage, files, device identifiers, clipboard, contacts, cameras, unrestricted navigation, or arbitrary native functions. The main-frame wrapper uses `react-native-webview`'s transport and requires the `react-native-get-random-values` native module for a secure capability; install native dependencies before building. Existing websites calling `window.ReactNativeWebView.postMessage` directly must switch to `window.WhiteLabelBridge.postMessage` for privileged messages.
 
 To add a future message type, extend the config union and parser, add an injected executor branch, define feature authorization, add it to runtime config validation, and cover parser, authorization, execution, response, and WebView transport behavior. Run bridge tests with `npm test -- webBridge AppWebView`.
 

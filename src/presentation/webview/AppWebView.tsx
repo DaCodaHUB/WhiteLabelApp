@@ -7,7 +7,9 @@ import {reactNativeLinking} from '../../infrastructure/linking/ReactNativeLinkin
 import {ErrorState, LoadingState, AppText} from '../components';
 import {useAppTheme} from '../theme';
 import type {AppWebViewProps} from './types';
+import {authorizedBridgeData, createMainFrameBridgeCapability, mainFrameBridgeScript} from './mainFrameBridge';
 import {useWebViewController} from './useWebViewController';
+import {evaluateWebRequest} from './webRequestPolicy';
 
 const DEDUPE_WINDOW_MS = 30_000;
 
@@ -15,9 +17,14 @@ export function AppWebView({initialUrl, allowedDomains, linking = reactNativeLin
   const theme = useAppTheme();
   const controller = useWebViewController(initialUrl, allowedDomains, linking);
   const handledIds = useRef(new Map<string, number>());
+  const capability = useRef<string | undefined>(undefined);
+  if (bridge?.enabled && !capability.current) capability.current = createMainFrameBridgeCapability();
   const onMessage = useCallback(async (event: WebViewMessageEvent) => {
-    if (!bridge?.enabled) return;
-    const data = event.nativeEvent.data;
+    if (!bridge?.enabled || !capability.current) return;
+    const sourceUrl = event.nativeEvent.url;
+    if (!sourceUrl || sourceUrl === 'about:blank' || evaluateWebRequest(sourceUrl, allowedDomains).type !== 'allowInternal') return;
+    const data = authorizedBridgeData(event.nativeEvent.data, capability.current, bridge.maxMessageLength);
+    if (data === null) return;
     const parsed = parseWebBridgeEventData(data, bridge.maxMessageLength);
     const now = Date.now();
     if (parsed?.id) {
@@ -34,12 +41,14 @@ export function AppWebView({initialUrl, allowedDomains, linking = reactNativeLin
     } catch {
       // Bridge failures are intentionally silent in native UI.
     }
-  }, [bridge, controller]);
+  }, [allowedDomains, bridge, controller]);
   return (
     <View style={styles.root}>
       <WebView
         ref={controller.webViewRef}
         source={{uri: initialUrl}}
+        injectedJavaScriptBeforeContentLoaded={bridge?.enabled && capability.current ? mainFrameBridgeScript(capability.current) : undefined}
+        injectedJavaScriptBeforeContentLoadedForMainFrameOnly
         originWhitelist={['https://*', 'tel:*', 'mailto:*', 'sms:*', 'about:*']}
         onShouldStartLoadWithRequest={(request: ShouldStartLoadRequest) => controller.handleRequest(request.url)}
         onNavigationStateChange={controller.updateNavigation}
