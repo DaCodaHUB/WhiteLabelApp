@@ -8,8 +8,6 @@
   },
   "ios": {
     "bundleIdentifier": "com.dacodahub.whitelabel.demo",
-    "targetName": "DaCodaHubDemo",
-    "schemeName": "DaCodaHubDemo",
     "deepLinkScheme": "dacodahubdemo"
   }
 }

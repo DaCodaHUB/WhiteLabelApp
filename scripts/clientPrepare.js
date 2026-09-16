@@ -51,8 +51,8 @@ try {
   console.log(`  - ${path.relative(workspaceRoot, androidPropsPath)}`);
   console.log(`  - ${path.relative(workspaceRoot, androidStringsPath)}`);
   console.log(`  - ${path.relative(workspaceRoot, iosConfigPath)}`);
-  console.log(`iOS values prepared: bundle ${nativeConfig.ios.bundleIdentifier}, target ${nativeConfig.ios.targetName}, scheme ${nativeConfig.ios.schemeName}.`);
-  console.log('iOS integration remains unverified until the generated xcconfig is connected and tested on macOS/Xcode.');
+  console.log(`iOS values prepared: bundle ${nativeConfig.ios.bundleIdentifier}, display name ${nativeConfig.displayName}, URL scheme ${nativeConfig.ios.deepLinkScheme}.`);
+  console.log('Verify the generated iOS identity in Xcode on macOS before release.');
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

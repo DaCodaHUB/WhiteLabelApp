@@ -8,8 +8,6 @@
   },
   "ios": {
     "bundleIdentifier": "com.whitelabelapp",
-    "targetName": "WhiteLabelApp",
-    "schemeName": "WhiteLabelApp",
     "deepLinkScheme": "whitelabelapp"
   }
 }

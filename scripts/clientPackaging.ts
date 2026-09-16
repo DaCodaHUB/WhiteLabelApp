@@ -8,7 +8,7 @@ export type ClientNativeConfig = {
   clientId: string;
   displayName: string;
   android: {applicationId: string; namespace: string; deepLinkScheme: string};
-  ios: {bundleIdentifier: string; targetName: string; schemeName: string; deepLinkScheme: string};
+  ios: {bundleIdentifier: string; deepLinkScheme: string};
 };
 export type ClientEnvironmentConfig = {
   website: {baseUrl: string; allowedDomains: string[]};
@@ -38,10 +38,11 @@ export function parseClientNativeConfig(value: unknown): ClientNativeConfig {
   requireRecord(value, 'native metadata');
   for (const key of NATIVE_FIELDS) if (!(key in value)) throw new Error(`${key} is required`);
   requireRecord(value.android, 'android'); requireRecord(value.ios, 'ios');
+  if ('targetName' in value.ios || 'schemeName' in value.ios) throw new Error('iOS targetName and schemeName are not client-specific; use the shared WhiteLabelApp target and scheme');
   const config: ClientNativeConfig = {
     clientId: textField(value, 'clientId'), displayName: textField(value, 'displayName'),
     android: {applicationId: textField(value.android, 'applicationId'), namespace: textField(value.android, 'namespace'), deepLinkScheme: textField(value.android, 'deepLinkScheme')},
-    ios: {bundleIdentifier: textField(value.ios, 'bundleIdentifier'), targetName: textField(value.ios, 'targetName'), schemeName: textField(value.ios, 'schemeName'), deepLinkScheme: textField(value.ios, 'deepLinkScheme')},
+    ios: {bundleIdentifier: textField(value.ios, 'bundleIdentifier'), deepLinkScheme: textField(value.ios, 'deepLinkScheme')},
   };
   validateClientNativeConfig(config); return config;
 }
@@ -49,11 +50,10 @@ export function validateClientNativeConfig(config: ClientNativeConfig): void {
   if (!CLIENT_ID.test(config.clientId)) throw new Error('clientId must be lowercase kebab-case (2-40 characters)');
   if (!config.displayName.trim() || config.displayName !== config.displayName.trim()) throw new Error('displayName is required and must not have surrounding whitespace');
   if (config.displayName.length > 48) throw new Error('displayName is too long (maximum 48 characters)');
+  if (/[\r\n\\]/.test(config.displayName) || config.displayName.includes('//') || config.displayName.includes('$(')) throw new Error('displayName contains unsupported Xcode configuration syntax');
   if (!ANDROID_ID.test(config.android.applicationId)) throw new Error('android.applicationId is invalid; use lowercase dot-separated identifiers');
   if (!ANDROID_ID.test(config.android.namespace)) throw new Error('android.namespace is invalid; use lowercase dot-separated identifiers');
   if (!IOS_ID.test(config.ios.bundleIdentifier)) throw new Error('ios.bundleIdentifier is invalid');
-  if (!config.ios.targetName.trim() || /\s/.test(config.ios.targetName)) throw new Error('ios.targetName is invalid');
-  if (!config.ios.schemeName.trim() || /\s/.test(config.ios.schemeName)) throw new Error('ios.schemeName is invalid');
   if (!SCHEME.test(config.android.deepLinkScheme)) throw new Error('android.deepLinkScheme is invalid');
   if (!SCHEME.test(config.ios.deepLinkScheme)) throw new Error('ios.deepLinkScheme is invalid');
   const identifiers = [config.android.applicationId, config.android.namespace, config.ios.bundleIdentifier];
@@ -77,7 +77,7 @@ function environmentTemplate(baseUrl: string, logging: 'debug' | 'error'): strin
   return `import type {ClientEnvironmentConfig} from '../../scripts/clientPackaging';\n\nexport const environmentConfig = {\n  website: {baseUrl: ${quoteTs(baseUrl)}, allowedDomains: [${quoteTs(hostname)}]},\n  analyticsEnabled: false,\n  logging: ${quoteTs(logging)},\n} satisfies ClientEnvironmentConfig;\n`;
 }
 export function createClientDefinition(options: CreateClientDefinitionOptions): {created: string[]; files: string[]} {
-  const native = parseClientNativeConfig({clientId: options.clientId, displayName: options.displayName, android: {applicationId: options.androidApplicationId, namespace: 'com.whitelabelapp', deepLinkScheme: options.clientId.replace(/-/g, '')}, ios: {bundleIdentifier: options.iosBundleIdentifier, targetName: options.clientId.replace(/-/g, ''), schemeName: options.clientId.replace(/-/g, ''), deepLinkScheme: options.clientId.replace(/-/g, '')}});
+  const native = parseClientNativeConfig({clientId: options.clientId, displayName: options.displayName, android: {applicationId: options.androidApplicationId, namespace: 'com.whitelabelapp', deepLinkScheme: options.clientId.replace(/-/g, '')}, ios: {bundleIdentifier: options.iosBundleIdentifier, deepLinkScheme: options.clientId.replace(/-/g, '')}});
   const clientDir = path.join(path.resolve(options.workspaceRoot), 'clients', options.clientId);
   if (fs.existsSync(clientDir)) return {created: [], files: []};
   const runtime = `import {defaultConfig} from '../../src/app/config/defaultConfig';\nimport type {ClientConfig} from '../../src/app/config/types';\n\nexport const clientConfig = {\n  ...defaultConfig,\n  clientId: ${quoteTs(options.clientId)},\n  appName: ${quoteTs(options.displayName)},\n  home: {...defaultConfig.home, title: ${quoteTs(options.displayName)}},\n  storage: {namespace: ${quoteTs(options.clientId)}},\n} satisfies ClientConfig;\n`;
@@ -141,8 +141,7 @@ export function androidPropertiesContent(clientId: string, displayName: string, 
 }
 export function androidStringsContent(displayName: string): string { return `<?xml version="1.0" encoding="utf-8"?>\n<!-- AUTO-GENERATED by client:prepare. DO NOT EDIT. -->\n<resources>\n    <string name="app_name">${xmlEscape(displayName)}</string>\n</resources>\n`; }
 export function iosConfigContent(clientId: string, displayName: string, ios: ClientNativeConfig['ios']): string {
-  const clean = (value: string) => value.replace(/\r|\n/g, '').replace(/\/\//g, '/$()/');
-  return `// AUTO-GENERATED by client:prepare. macOS/Xcode verification required.\nCLIENT_ID = ${clean(clientId)}\nCLIENT_DISPLAY_NAME = ${clean(displayName)}\nCLIENT_IOS_BUNDLE_IDENTIFIER = ${clean(ios.bundleIdentifier)}\nCLIENT_IOS_TARGET_NAME = ${clean(ios.targetName)}\nCLIENT_IOS_SCHEME_NAME = ${clean(ios.schemeName)}\nCLIENT_IOS_DEEP_LINK_SCHEME = ${clean(ios.deepLinkScheme)}\n`;
+  return `// AUTO-GENERATED by client:prepare. macOS/Xcode verification required.\nCLIENT_ID = ${clientId}\nCLIENT_DISPLAY_NAME = ${displayName}\nCLIENT_IOS_BUNDLE_IDENTIFIER = ${ios.bundleIdentifier}\nCLIENT_IOS_DEEP_LINK_SCHEME = ${ios.deepLinkScheme}\n`;
 }
 export function writeFilesAtomically(files: ReadonlyArray<{path: string; content: string}>): void {
   const changedFiles = files.filter(file => !fs.existsSync(file.path) || fs.readFileSync(file.path, 'utf8') !== file.content);

@@ -1,0 +1,3 @@
+// Keep CocoaPods settings and client identity in the same target configuration.
+#include "Pods/Target Support Files/Pods-WhiteLabelApp/Pods-WhiteLabelApp.release.xcconfig"
+#include "client.generated.xcconfig"
