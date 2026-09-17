@@ -1,5 +1,5 @@
 import React from 'react';
-import {StyleSheet, View} from 'react-native';
+import {Image, StyleSheet, View} from 'react-native';
 import {useClientConfig} from '../../app/providers/ClientConfigProvider';
 import {AppButton, AppCard, AppIcon, AppScreen, AppText} from '../components';
 import {useAppTheme} from '../theme';
@@ -15,6 +15,7 @@ export function HomeScreen() {
   return (
     <AppScreen scroll>
       <View style={[styles.header, {gap: theme.spacing.sm, paddingVertical: theme.spacing.lg}]}>
+        {config.branding.logo && <Image source={config.branding.logo} style={styles.brandLogo} resizeMode="contain" accessibilityLabel={`${config.appName} logo`} />}
         <AppText variant="heading">{config.home.title ?? config.appName}</AppText>
         {config.home.subtitle && <AppText color="textSecondary">{config.home.subtitle}</AppText>}
       </View>
@@ -34,4 +35,4 @@ export function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({header: {}, action: {alignItems: 'center', flexDirection: 'row', minHeight: 44}, actionText: {flex: 1}});
+const styles = StyleSheet.create({header: {}, brandLogo: {height: 96, width: 160}, action: {alignItems: 'center', flexDirection: 'row', minHeight: 44}, actionText: {flex: 1}});

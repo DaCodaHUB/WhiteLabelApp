@@ -32,6 +32,13 @@ test('renders configured home actions', () => {
   expect(renderer.root.findByProps({children: 'Settings'})).toBeTruthy();
 });
 
+test('renders the prepared client brand logo', () => {
+  const logo = {uri: 'test-client-logo'};
+  const config: ClientConfig = {...defaultConfig, branding: {...defaultConfig.branding, logo}};
+  const renderer = renderHome(config);
+  expect(renderer.root.findByProps({accessibilityLabel: 'White Label App logo'}).props.source).toEqual(logo);
+});
+
 test('pressing an action delegates to the executor', async () => {
   const renderer = renderHome();
   await ReactTestRenderer.act(async () => { await renderer.root.findByProps({accessibilityLabel: 'View Website'}).props.onPress(); });

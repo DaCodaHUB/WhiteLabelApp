@@ -16,7 +16,7 @@ export type BrandingConfig = {
   textColor: string;
   mutedTextColor: string;
   surfaceColor: string;
-  logo: ImageSourcePropType;
+  logo?: ImageSourcePropType;
 };
 
 export type AppIconName =

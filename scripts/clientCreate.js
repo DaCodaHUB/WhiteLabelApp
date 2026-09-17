@@ -45,6 +45,6 @@ console.log('Next steps:');
 console.log(`  - Review clients/${clientId}/client.config.ts`);
 console.log(`  - Review clients/${clientId}/client.native.json`);
 console.log(`  - Replace public values in both environment files`);
-console.log(`  - Add and explicitly register production artwork; credentials belong outside source control`);
+console.log(`  - Add assets/app-icon.png, assets/splash-logo.png, and assets/brand-logo.png; see assets/README.md`);
 console.log(`  - Run: npm run client:validate -- --client ${clientId}`);
 console.log(`  - Run: npm run client:prepare -- --client ${clientId} --environment development`);

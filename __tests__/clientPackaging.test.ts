@@ -149,6 +149,7 @@ describe('client packaging helpers', () => {
     });
 
     expect(result).toMatch(/activeClientConfig/);
+    expect(result).toContain("logo: require('./brand-logo.png')");
     expect(props).toContain('CLIENT_DISPLAY_NAME=DaCodaHub Demo & Co');
     expect(fs.existsSync(outputFile)).toBe(true);
     expect(fs.existsSync(propsFile)).toBe(true);

@@ -69,9 +69,16 @@ yarn-error.log
 
 # generated client packaging output
 /src/generated/activeClient.ts
+/src/generated/brand-logo.png
 /android/client.generated.properties
 /android/app/src/main/res/values/client_generated_strings.xml
+/android/app/src/main/res/values/client_artwork_colors.xml
+/android/app/src/main/res/mipmap-*/client_launcher*.png
+/android/app/src/main/res/drawable-*/client_splash_logo.png
 /ios/client.generated.xcconfig
+/ios/WhiteLabelApp/Images.xcassets/ClientAppIcon.appiconset/
+/ios/WhiteLabelApp/Images.xcassets/ClientLaunchLogo.imageset/
+/ios/WhiteLabelApp/ClientLaunchScreen.storyboard
 
 # client credentials and local native secrets
 clients/**/credentials/

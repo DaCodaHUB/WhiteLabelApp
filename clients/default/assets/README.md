@@ -8,4 +8,4 @@ Required production source artwork:
 - `splash-logo.png`: at least 1200 x 1200 transparent PNG.
 - `brand-logo.png`: at least 512 px wide transparent PNG.
 
-Add runtime images through an explicit static `require()` registry. Never build dynamic asset paths.
+Preparation generates Android, iOS, and runtime assets automatically. Development uses generic placeholders while all three files are absent. Production requires all three valid files. Do not edit generated outputs.

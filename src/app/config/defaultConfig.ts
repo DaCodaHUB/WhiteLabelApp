@@ -18,7 +18,6 @@ export const defaultConfig = {
     textColor: '#0F172A',
     mutedTextColor: '#64748B',
     surfaceColor: '#FFFFFF',
-    logo: {uri: 'client-logo-placeholder'},
   },
   home: {
     title: 'Welcome',

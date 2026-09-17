@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const path = require('path');
-const {resolveClientSelection, validateClientProject, activeClientContent, androidPropertiesContent, androidStringsContent, iosConfigContent, writeFilesAtomically} = require('./clientPackaging');
+const {resolveClientSelection, validateClientProject, activeClientContent, androidPropertiesContent, androidStringsContent, iosConfigContent, buildClientArtworkFiles, writeFilesAtomically} = require('./clientPackaging');
 
 function parseArgs(argv) {
   const args = {};
@@ -37,13 +37,14 @@ const androidPropsPath = path.join(workspaceRoot, 'android', 'client.generated.p
 const androidStringsPath = path.join(workspaceRoot, 'android', 'app', 'src', 'main', 'res', 'values', 'client_generated_strings.xml');
 const iosConfigPath = path.join(workspaceRoot, 'ios', 'client.generated.xcconfig');
 
-try {
+buildClientArtworkFiles(workspaceRoot, selected.clientId, environment, validation.runtime.branding).then(artworkFiles => {
   const nativeConfig = validation.native;
   writeFilesAtomically([
     {path: activeClientPath, content: activeClientContent(selected.clientId, environment)},
     {path: androidPropsPath, content: androidPropertiesContent(selected.clientId, nativeConfig.displayName, nativeConfig.android)},
     {path: androidStringsPath, content: androidStringsContent(nativeConfig.displayName)},
     {path: iosConfigPath, content: iosConfigContent(selected.clientId, nativeConfig.displayName, nativeConfig.ios)},
+    ...artworkFiles,
   ]);
   console.log(`Prepared client '${selected.clientId}' for ${environment}.`);
   console.log('Generated files:');
@@ -51,9 +52,10 @@ try {
   console.log(`  - ${path.relative(workspaceRoot, androidPropsPath)}`);
   console.log(`  - ${path.relative(workspaceRoot, androidStringsPath)}`);
   console.log(`  - ${path.relative(workspaceRoot, iosConfigPath)}`);
+  console.log(`  - ${artworkFiles.length} generated artwork files for Android, iOS, and runtime branding`);
   console.log(`iOS values prepared: bundle ${nativeConfig.ios.bundleIdentifier}, display name ${nativeConfig.displayName}, URL scheme ${nativeConfig.ios.deepLinkScheme}.`);
   console.log('Verify the generated iOS identity in Xcode on macOS before release.');
-} catch (error) {
+}).catch(error => {
   console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
-}
+  process.exitCode = 1;
+});

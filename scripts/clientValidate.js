@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const path = require('path');
-const {validateClientProject, resolveClientSelection} = require('./clientPackaging');
+const {validateClientProject, loadClientArtwork, resolveClientSelection} = require('./clientPackaging');
 
 function parseArgs(argv) {
   const args = {};
@@ -23,8 +23,14 @@ if (options.environment && !['development', 'production'].includes(options.envir
 const environment = options.environment || 'development';
 const selected = resolveClientSelection({environment, clientId: options.client || options.id, cwd: path.resolve(__dirname, '..')});
 try {
-  validateClientProject({workspaceRoot: path.resolve(__dirname, '..'), clientId: selected.clientId, environment});
-  console.log(`Client '${selected.clientId}' validates successfully.`);
+  const workspaceRoot = path.resolve(__dirname, '..');
+  const validation = validateClientProject({workspaceRoot, clientId: selected.clientId, environment});
+  loadClientArtwork(path.join(workspaceRoot, 'clients', selected.clientId), environment, validation.runtime.branding.primaryColor).then(() => {
+    console.log(`Client '${selected.clientId}' validates successfully.`);
+  }).catch(error => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
