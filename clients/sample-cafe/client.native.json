@@ -1,0 +1,13 @@
+{
+  "clientId": "sample-cafe",
+  "displayName": "Sample Cafe",
+  "android": {
+    "applicationId": "com.whitelabel.samplecafe",
+    "namespace": "com.whitelabelapp",
+    "deepLinkScheme": "samplecafe"
+  },
+  "ios": {
+    "bundleIdentifier": "com.whitelabel.samplecafe",
+    "deepLinkScheme": "samplecafe"
+  }
+}
