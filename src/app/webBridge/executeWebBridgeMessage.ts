@@ -1,5 +1,6 @@
 import {executeHomeAction} from '../homeActions';
 import type {HomeAction} from '../config/types';
+import {requiredFeatureForDestination} from '../config/featureAvailability';
 import type {WebBridgeDependencies, WebBridgeMessage, WebBridgeResult} from './types';
 
 const safeMessages: Record<string, string> = {
@@ -30,6 +31,7 @@ async function executeHomeEquivalent(action: HomeAction, message: WebBridgeMessa
 
 export async function executeWebBridgeMessage(message: WebBridgeMessage, dependencies: WebBridgeDependencies): Promise<WebBridgeResult> {
   const {features} = dependencies.config;
+  if (!features.webContent) return result(message, 'unsupported', 'FEATURE_DISABLED');
   try {
     switch (message.type) {
       case 'openPhone':
@@ -44,7 +46,7 @@ export async function executeWebBridgeMessage(message: WebBridgeMessage, depende
       case 'openExternal':
         return executeHomeEquivalent({id: 'bridge', title: 'External link', icon: 'open-in-new', type: 'externalUrl', url: message.url}, message, dependencies);
       case 'openNative':
-        if (message.destination === 'settings' && !features.settings) return result(message, 'unsupported', 'INVALID_DESTINATION');
+        if (!features[requiredFeatureForDestination(message.destination)]) return result(message, 'unsupported', 'INVALID_DESTINATION');
         return executeHomeEquivalent({id: 'bridge', title: 'Native screen', icon: 'settings', type: 'nativeScreen', screen: message.destination}, message, dependencies);
       case 'share':
         if (!features.sharing) return result(message, 'unsupported', 'FEATURE_DISABLED');

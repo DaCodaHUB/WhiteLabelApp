@@ -50,3 +50,11 @@ test('denied state exposes system settings behavior', async () => {
   expect(openApplicationSettings).toHaveBeenCalledTimes(1);
   expect(JSON.stringify(renderer.toJSON())).toContain('Denied');
 });
+
+test('disabled notifications expose no permission actions in Settings', () => {
+  mockUseNotifications.mockReturnValue(notificationValue({enabled: false, canRequestPermission: false, permissionState: 'unavailable'}));
+  const renderer = render(<SettingsScreen />);
+  expect(renderer.root.findAllByProps({accessibilityLabel: 'Enable Notifications'})).toHaveLength(0);
+  expect(renderer.root.findAllByProps({accessibilityLabel: 'Open System Settings'})).toHaveLength(0);
+  expect(requestPermission).not.toHaveBeenCalled();
+});

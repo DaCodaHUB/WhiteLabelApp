@@ -41,6 +41,7 @@ function BridgeEnabledWebView({uri}: {uri: string}) {
 
 export function WebContentScreen({route}: Props) {
   const config = useClientConfig();
+  if (!config.features.webContent) return <ErrorState title="Page unavailable" message="This page is not available." />;
   const {website} = config;
   const uri = route.params.url;
   if (evaluateWebRequest(uri, website.allowedDomains).type !== 'allowInternal' || uri === 'about:blank') {

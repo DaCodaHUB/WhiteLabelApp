@@ -50,7 +50,7 @@ If Metro or a native build shows stale branding, stop Metro, rerun `client:prepa
 
 The client ID, storage namespace, Android application ID, iOS bundle ID, display name, signing identities, app icons, service files, and store records must be unique per published app. Native identifiers are intentionally separate from runtime TypeScript configuration.
 
-Feature flags are static build configuration. They expose or disable framework capabilities and are read with `useFeatureFlag`; they are not mutable user state. Validation enforces dependencies such as a booking route for appointments and a shop route for ecommerce.
+Feature flags are static client configuration, not mutable user state. `webContent` controls the WebContent screen, Home web actions, website bridge, and notification web destinations. `settings` controls the Settings screen and Home, bridge, and notification navigation to it. `contact` controls phone/email Home and bridge actions; `location` controls map actions; `sharing` controls bridge sharing. `notifications` controls OneSignal initialization, notification routing, and bridge identity actions. The Settings permission controls appear only while notifications are enabled. Enabled Home actions requiring a disabled feature fail client validation; runtime also hides and rejects them. Appointment, authentication, ecommerce, loyalty, analytics, and logging capabilities are not implemented and have no configuration flags.
 
 OneSignal initializes only when notifications are enabled and an App ID is present. App IDs and platform capability setup belong to each client; APNs credentials, Firebase credentials, signing material, and OneSignal REST API keys must never be committed to or embedded in the mobile application.
 
@@ -237,6 +237,6 @@ To use it:
 2. Open **Open Test Lab** from Home.
 3. Run an action and inspect its safe status under **Last result**.
 
-Some actions launch native applications, so results vary with emulator capabilities. Notifications remain disabled because the demo intentionally has no OneSignal App ID. The notification routing buttons test payload parsing and navigation only; they do not request permission or contact OneSignal.
+Some actions launch native applications, so results vary with emulator capabilities. Notifications remain disabled because the demo intentionally has no OneSignal App ID. The notification routing buttons report `notifications-disabled` for valid destinations; malformed payloads still report `invalid-payload`. They do not request permission or contact OneSignal.
 
 Run the focused development-environment tests with `npm test -- testLab`. They verify the build guard, production-service delegation, malformed-payload rejection, and fictional-data constraints.

@@ -1,5 +1,6 @@
 import type {ClientConfig} from './types';
 import type {WebBridgeMessageType} from './types';
+import {requiredFeatureForHomeAction} from './featureAvailability';
 
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$/;
 const WEB_BRIDGE_TYPES: ReadonlySet<WebBridgeMessageType> = new Set([
@@ -55,6 +56,9 @@ export function validateClientConfig(config: ClientConfig): void {
   requireText(config.storage.namespace, 'storage.namespace');
 
   if (config.webBridge) {
+    if (config.webBridge.enabled && !config.features.webContent) {
+      throw new Error('Invalid client configuration: webBridge.enabled requires features.webContent.');
+    }
     if (!Number.isInteger(config.webBridge.maxMessageLength) || config.webBridge.maxMessageLength < 256 || config.webBridge.maxMessageLength > 65536) {
       throw new Error('Invalid client configuration: webBridge.maxMessageLength must be an integer from 256 to 65536.');
     }
@@ -78,6 +82,11 @@ export function validateClientConfig(config: ClientConfig): void {
       throw new Error(`Invalid client configuration: duplicate home action ID "${action.id}".`);
     }
     actionIds.add(action.id);
+
+    const requiredFeature = requiredFeatureForHomeAction(action);
+    if (action.enabled !== false && requiredFeature && !config.features[requiredFeature]) {
+      throw new Error(`Invalid client configuration: ${field} requires features.${requiredFeature}.`);
+    }
 
     switch (action.type) {
       case 'web':
@@ -118,12 +127,6 @@ export function validateClientConfig(config: ClientConfig): void {
     requireText(config.notifications.permissionPrompt.message, 'notifications.permissionPrompt.message');
     requireText(config.notifications.permissionPrompt.allowLabel, 'notifications.permissionPrompt.allowLabel');
     requireText(config.notifications.permissionPrompt.laterLabel, 'notifications.permissionPrompt.laterLabel');
-  }
-  if (config.features.appointments && !config.website.routes.booking) {
-    throw new Error('Invalid client configuration: website.routes.booking is required when appointments are enabled.');
-  }
-  if (config.features.ecommerce && !config.website.routes.shop) {
-    throw new Error('Invalid client configuration: website.routes.shop is required when ecommerce is enabled.');
   }
   if (config.features.location && !config.contact.address && !config.contact.mapUrl) {
     throw new Error('Invalid client configuration: an address or map URL is required when location is enabled.');

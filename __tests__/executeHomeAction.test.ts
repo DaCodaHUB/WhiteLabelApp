@@ -1,8 +1,8 @@
 import {defaultConfig} from '../src/app/config/defaultConfig';
-import type {HomeAction} from '../src/app/config/types';
+import type {ClientConfig, HomeAction} from '../src/app/config/types';
 import {executeHomeAction, type ExternalLinking, type HomeActionNavigator} from '../src/app/homeActions';
 
-function dependencies(overrides: {linking?: ExternalLinking; navigate?: HomeActionNavigator; config?: typeof defaultConfig} = {}) {
+function dependencies(overrides: {linking?: ExternalLinking; navigate?: HomeActionNavigator; config?: ClientConfig} = {}) {
   return {
     config: overrides.config ?? defaultConfig,
     linking: overrides.linking ?? {canOpenUrl: jest.fn(async () => true), openUrl: jest.fn(async () => undefined)},
@@ -30,17 +30,17 @@ describe('executeHomeAction', () => {
     expect(deps.navigate.openNativeScreen).toHaveBeenCalledWith('settings');
   });
   test('prefers an action phone number over client contact', async () => {
-    const deps = dependencies();
+    const deps = dependencies({config: {...defaultConfig, features: {...defaultConfig.features, contact: true}}});
     await executeHomeAction({id: 'phone', title: 'Call', icon: 'phone', type: 'phone', phoneNumber: '+1 (212) 555-0100'}, deps);
     expect(deps.linking.openUrl).toHaveBeenCalledWith('tel:+12125550100');
   });
   test('falls back to client contact email', async () => {
-    const deps = dependencies({config: {...defaultConfig, contact: {email: 'contact@example.com'}}});
+    const deps = dependencies({config: {...defaultConfig, features: {...defaultConfig.features, contact: true}, contact: {email: 'contact@example.com'}}});
     await executeHomeAction({id: 'email', title: 'Email', icon: 'email', type: 'email'}, deps);
     expect(deps.linking.openUrl).toHaveBeenCalledWith('mailto:contact@example.com');
   });
   test('uses map destinations in documented priority order', async () => {
-    const deps = dependencies({config: {...defaultConfig, contact: {mapUrl: 'https://maps.example.com/client', address: 'Client address'}}});
+    const deps = dependencies({config: {...defaultConfig, features: {...defaultConfig.features, location: true}, contact: {mapUrl: 'https://maps.example.com/client', address: 'Client address'}}});
     const action: HomeAction = {id: 'maps', title: 'Map', icon: 'explore', type: 'maps', mapUrl: 'https://maps.example.com/action', address: 'Action address'};
     await executeHomeAction(action, deps);
     expect(deps.linking.openUrl).toHaveBeenCalledWith('https://maps.example.com/action');
@@ -61,5 +61,19 @@ describe('executeHomeAction', () => {
     expect((await executeHomeAction({id: 'bad', title: 'Bad', icon: 'open-in-new', type: 'externalUrl', url: 'not-a-url'}, deps)).status).toBe('failed');
     expect((await executeHomeAction({id: 'good', title: 'Good', icon: 'open-in-new', type: 'externalUrl', url: 'https://example.org/path'}, deps)).status).toBe('success');
     expect(deps.linking.openUrl).toHaveBeenCalledWith('https://example.org/path');
+  });
+  test.each([
+    [{id: 'web', title: 'Web', icon: 'language', type: 'web', route: '/'} as HomeAction, 'webContent'],
+    [{id: 'settings', title: 'Settings', icon: 'settings', type: 'nativeScreen', screen: 'settings'} as HomeAction, 'settings'],
+    [{id: 'phone', title: 'Call', icon: 'phone', type: 'phone', phoneNumber: '+15550100'} as HomeAction, 'contact'],
+    [{id: 'email', title: 'Email', icon: 'email', type: 'email', emailAddress: 'a@example.com'} as HomeAction, 'contact'],
+    [{id: 'maps', title: 'Maps', icon: 'explore', type: 'maps', address: '1 Main St'} as HomeAction, 'location'],
+  ])('rejects disabled %s action at execution time', async (action, feature) => {
+    const config = {...defaultConfig, features: {...defaultConfig.features, [feature]: false}};
+    const deps = dependencies({config});
+    expect((await executeHomeAction(action, deps)).status).toBe('unsupported');
+    expect(deps.navigate.openWebContent).not.toHaveBeenCalled();
+    expect(deps.navigate.openNativeScreen).not.toHaveBeenCalled();
+    expect(deps.linking.openUrl).not.toHaveBeenCalled();
   });
 });

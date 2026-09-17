@@ -1,5 +1,6 @@
 import {buildClientUrl, isAllowedClientUrl} from '../config/url';
 import type {HomeAction} from '../config/types';
+import {isHomeActionAvailable} from '../config/featureAvailability';
 import {buildEmailUrl} from './email';
 import {buildMapsUrl} from './maps';
 import {buildTelephoneUrl} from './phone';
@@ -36,6 +37,7 @@ async function openExternal(url: string | null, message: string, dependencies: H
 
 export async function executeHomeAction(action: HomeAction, dependencies: HomeActionDependencies): Promise<HomeActionResult> {
   const {config, navigate} = dependencies;
+  if (!isHomeActionAvailable(action, config)) return {status: 'unsupported', message: 'This action is unavailable.'};
   switch (action.type) {
     case 'web':
       try {

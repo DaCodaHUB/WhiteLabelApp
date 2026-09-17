@@ -46,13 +46,8 @@ export const clientConfig: ClientConfig = {
   },
   storage: {namespace: 'demo-example-works'},
   features: {
-    nativeHome: true,
     webContent: true,
     notifications: false,
-    appointments: false,
-    authentication: false,
-    ecommerce: false,
-    loyalty: false,
     contact: true,
     location: true,
     sharing: true,

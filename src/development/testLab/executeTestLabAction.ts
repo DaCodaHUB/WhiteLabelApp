@@ -1,4 +1,3 @@
-import {buildClientUrl} from '../../app/config/url';
 import {executeHomeAction} from '../../app/homeActions';
 import {createNotificationRouter} from '../../app/notifications';
 import {evaluateWebRequest} from '../../presentation/webview';
@@ -19,9 +18,10 @@ function action(id: TestLabActionId): TestLabHomeAction | undefined {
 
 export async function executeTestLabAction(id: TestLabActionId, dependencies: TestLabDependencies): Promise<TestLabExecutionResult> {
   if (id === 'internalWebView') {
-    const url = buildClientUrl(dependencies.config.website.baseUrl, dependencies.config.website.routes.home);
-    dependencies.homeNavigation.openWebContent(url, 'Internal WebView');
-    return {status: 'success'};
+    const result = await executeHomeAction({id, title: 'Internal WebView', icon: 'language', type: 'web', route: dependencies.config.website.routes.home}, {
+      config: dependencies.config, linking: dependencies.linking, navigate: dependencies.homeNavigation,
+    });
+    return {status: result.status};
   }
   if (id === 'lookalikeDomain') {
     const decision = evaluateWebRequest('https://fakedemo.example', dependencies.config.website.allowedDomains);

@@ -13,8 +13,6 @@ export type ClientNativeConfig = {
 };
 export type ClientEnvironmentConfig = {
   website: {baseUrl: string; allowedDomains: string[]};
-  analyticsEnabled: boolean;
-  logging: 'debug' | 'error';
 };
 export type ResolveClientSelectionOptions = {environment: ClientEnvironment; clientId?: string; cwd?: string};
 export type CreateClientDefinitionOptions = {workspaceRoot: string; clientId: string; displayName: string; androidApplicationId: string; iosBundleIdentifier: string};
@@ -73,9 +71,9 @@ export function resolveClientSelection(options: ResolveClientSelectionOptions): 
 }
 
 function quoteTs(value: string): string { return JSON.stringify(value); }
-function environmentTemplate(baseUrl: string, logging: 'debug' | 'error'): string {
+function environmentTemplate(baseUrl: string): string {
   const hostname = new URL(baseUrl).hostname;
-  return `import type {ClientEnvironmentConfig} from '../../scripts/clientPackaging';\n\nexport const environmentConfig = {\n  website: {baseUrl: ${quoteTs(baseUrl)}, allowedDomains: [${quoteTs(hostname)}]},\n  analyticsEnabled: false,\n  logging: ${quoteTs(logging)},\n} satisfies ClientEnvironmentConfig;\n`;
+  return `import type {ClientEnvironmentConfig} from '../../scripts/clientPackaging';\n\nexport const environmentConfig = {\n  website: {baseUrl: ${quoteTs(baseUrl)}, allowedDomains: [${quoteTs(hostname)}]},\n} satisfies ClientEnvironmentConfig;\n`;
 }
 export function createClientDefinition(options: CreateClientDefinitionOptions): {created: string[]; files: string[]} {
   const native = parseClientNativeConfig({clientId: options.clientId, displayName: options.displayName, android: {applicationId: options.androidApplicationId, namespace: 'com.whitelabelapp', deepLinkScheme: options.clientId.replace(/-/g, '')}, ios: {bundleIdentifier: options.iosBundleIdentifier, deepLinkScheme: options.clientId.replace(/-/g, '')}});
@@ -84,7 +82,7 @@ export function createClientDefinition(options: CreateClientDefinitionOptions): 
   const runtime = `import {defaultConfig} from '../../src/app/config/defaultConfig';\nimport type {ClientConfig} from '../../src/app/config/types';\n\nexport const clientConfig = {\n  ...defaultConfig,\n  clientId: ${quoteTs(options.clientId)},\n  appName: ${quoteTs(options.displayName)},\n  home: {...defaultConfig.home, title: ${quoteTs(options.displayName)}},\n  storage: {namespace: ${quoteTs(options.clientId)}},\n} satisfies ClientConfig;\n`;
   const files = new Map<string, string>([
     ['client.config.ts', runtime], ['client.native.json', JSON.stringify(native, null, 2) + '\n'],
-    ['environment.development.ts', environmentTemplate('https://example.com', 'debug')], ['environment.production.ts', environmentTemplate('https://example.com', 'error')],
+    ['environment.development.ts', environmentTemplate('https://example.com')], ['environment.production.ts', environmentTemplate('https://example.com')],
     ['assets/README.md', assetReadme(options.clientId)],
   ]);
   const staging = `${clientDir}.creating-${process.pid}`;
@@ -109,10 +107,8 @@ function loadEnvironmentConfig(workspaceRoot: string, clientId: string, environm
   const website = loaded.environmentConfig.website; requireRecord(website, 'environmentConfig.website');
   const baseUrl = textField(website, 'baseUrl'); const domains = website.allowedDomains;
   if (!Array.isArray(domains) || domains.length === 0 || domains.some(item => typeof item !== 'string' || !item.trim())) throw new Error('environmentConfig.website.allowedDomains is invalid');
-  if (typeof loaded.environmentConfig.analyticsEnabled !== 'boolean') throw new Error('environmentConfig.analyticsEnabled must be boolean');
-  if (loaded.environmentConfig.logging !== 'debug' && loaded.environmentConfig.logging !== 'error') throw new Error('environmentConfig.logging is invalid');
   const url = new URL(baseUrl); if (url.protocol !== 'https:') throw new Error('environment website must use HTTPS');
-  return {website: {baseUrl, allowedDomains: domains as string[]}, analyticsEnabled: loaded.environmentConfig.analyticsEnabled, logging: loaded.environmentConfig.logging};
+  return {website: {baseUrl, allowedDomains: domains as string[]}};
 }
 export function validateClientProject(options: ValidateClientProjectOptions): {runtime: ClientConfig; native: ClientNativeConfig; environment: ClientEnvironmentConfig} {
   const root = path.resolve(options.workspaceRoot); const dir = path.join(root, 'clients', options.clientId);

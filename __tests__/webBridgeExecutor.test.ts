@@ -80,4 +80,14 @@ describe('web bridge executor', () => {
     const deps = dependencies({...config(), features: {...config().features, sharing: false}});
     expect(await executeWebBridgeMessage({version: 1, type: 'share', message: 'hello'}, deps)).toMatchObject({code: 'FEATURE_DISABLED'});
   });
+  test('disabled Settings cannot be opened through bridge navigation', async () => {
+    const deps = dependencies({...config(), features: {...config().features, settings: false}});
+    expect(await executeWebBridgeMessage({version: 1, type: 'openNative', destination: 'settings'}, deps)).toMatchObject({code: 'INVALID_DESTINATION'});
+    expect(deps.navigation.openNative).not.toHaveBeenCalled();
+  });
+  test('disabled WebContent cannot execute bridge actions', async () => {
+    const deps = dependencies({...config(), features: {...config().features, webContent: false}});
+    expect(await createWebBridgeHandler(deps)(JSON.stringify({version: 1, type: 'openExternal', url: 'https://outside.test'}), 'https://example.com')).toMatchObject({code: 'FEATURE_DISABLED'});
+    expect(deps.linking.openUrl).not.toHaveBeenCalled();
+  });
 });

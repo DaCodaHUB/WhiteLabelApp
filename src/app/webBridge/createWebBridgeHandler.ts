@@ -16,6 +16,7 @@ export function createWebBridgeHandler(dependencies: WebBridgeDependencies): Web
     if (currentUrl === 'about:blank' || !isAllowedClientUrl(currentUrl, dependencies.config.website.allowedDomains)) {
       return withId(failure('UNAUTHORIZED_PAGE', 'The current page is not authorized.'));
     }
+    if (!dependencies.config.features.webContent) return withId(failure('FEATURE_DISABLED', 'This feature is unavailable.'));
     try { return await executeWebBridgeMessage(message, dependencies); }
     catch { return withId({status: 'failed', code: 'EXECUTION_FAILED', message: 'The requested action could not be completed.'}); }
   };

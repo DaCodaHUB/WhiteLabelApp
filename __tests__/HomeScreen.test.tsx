@@ -60,3 +60,21 @@ test('does not render disabled configured actions', () => {
   expect(renderer.root.findAllByProps({accessibilityLabel: 'View Website'})).toHaveLength(0);
   expect(execute).not.toHaveBeenCalled();
 });
+
+test.each([
+  ['webContent', 'View Website'],
+  ['settings', 'Settings'],
+])('hides Home action when %s is disabled', (feature, title) => {
+  const config: ClientConfig = {...defaultConfig, features: {...defaultConfig.features, [feature]: false}};
+  expect(renderHome(config).root.findAllByProps({accessibilityLabel: title})).toHaveLength(0);
+});
+
+test('hides phone, email, and maps actions when contact and location are disabled', () => {
+  const config: ClientConfig = {...defaultConfig, home: {actions: [
+    {id: 'phone', title: 'Call', icon: 'phone', type: 'phone', phoneNumber: '+15550100'},
+    {id: 'email', title: 'Email', icon: 'email', type: 'email', emailAddress: 'a@example.com'},
+    {id: 'maps', title: 'Maps', icon: 'explore', type: 'maps', address: '1 Main St'},
+  ]}};
+  const renderer = renderHome(config);
+  for (const title of ['Call', 'Email', 'Maps']) expect(renderer.root.findAllByProps({accessibilityLabel: title})).toHaveLength(0);
+});

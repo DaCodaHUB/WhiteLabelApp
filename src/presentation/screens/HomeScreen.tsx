@@ -1,6 +1,7 @@
 import React from 'react';
 import {Image, StyleSheet, View} from 'react-native';
 import {useClientConfig} from '../../app/providers/ClientConfigProvider';
+import {isHomeActionAvailable} from '../../app/config/featureAvailability';
 import {AppButton, AppCard, AppIcon, AppScreen, AppText} from '../components';
 import {useAppTheme} from '../theme';
 import {useHomeActionExecutor} from '../hooks/useHomeActionExecutor';
@@ -10,7 +11,7 @@ import {rootNavigationRef} from '../navigation/notificationNavigation';
 export function HomeScreen() {
   const config = useClientConfig();
   const theme = useAppTheme();
-  const actions = config.home.actions.filter(action => action.enabled !== false);
+  const actions = config.home.actions.filter(action => isHomeActionAvailable(action, config));
   const {execute, executingActionId, errorMessage} = useHomeActionExecutor();
   return (
     <AppScreen scroll>

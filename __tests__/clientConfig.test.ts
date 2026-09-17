@@ -37,16 +37,28 @@ describe('validateClientConfig', () => {
     expect(() => validateClientConfig(config)).toThrow('notifications.oneSignalAppId');
   });
 
+  test('rejects an enabled website bridge without WebContent', () => {
+    const config = createConfig({
+      home: {actions: []},
+      features: {...defaultConfig.features, webContent: false},
+      webBridge: {enabled: true, allowedMessageTypes: ['openExternal'], maxMessageLength: 8192},
+    });
+    expect(() => validateClientConfig(config)).toThrow('webBridge.enabled requires features.webContent');
+  });
+
   test('requires custom notification prompt copy when enabled', () => {
     const config = createConfig({notifications: {...defaultConfig.notifications, permissionPrompt: {...defaultConfig.notifications.permissionPrompt, title: ''}}});
     expect(() => validateClientConfig(config)).toThrow('notifications.permissionPrompt.title');
   });
 
-  test('requires a booking route when appointments are enabled', () => {
-    const config = createConfig({
-      features: {...defaultConfig.features, appointments: true},
-    });
-    expect(() => validateClientConfig(config)).toThrow('website.routes.booking');
+  test.each([
+    [{id: 'web', title: 'Web', icon: 'language', type: 'web', route: '/'} as const, 'webContent'],
+    [{id: 'settings', title: 'Settings', icon: 'settings', type: 'nativeScreen', screen: 'settings'} as const, 'settings'],
+    [{id: 'phone', title: 'Call', icon: 'phone', type: 'phone', phoneNumber: '+15550100'} as const, 'contact'],
+    [{id: 'maps', title: 'Maps', icon: 'explore', type: 'maps', address: 'Main St'} as const, 'location'],
+  ])('rejects enabled Home action when %s feature is disabled', (action, feature) => {
+    const config = createConfig({home: {actions: [action]}, features: {...defaultConfig.features, [feature]: false}});
+    expect(() => validateClientConfig(config)).toThrow(`features.${feature}`);
   });
 
   test('rejects duplicate home action IDs', () => {
@@ -67,7 +79,7 @@ describe('validateClientConfig', () => {
   });
 
   test('rejects a phone action without any phone number', () => {
-    const config = createConfig({home: {actions: [{id: 'call', title: 'Call', icon: 'phone', type: 'phone'}]}});
+    const config = createConfig({home: {actions: [{id: 'call', title: 'Call', icon: 'phone', type: 'phone'}]}, features: {...defaultConfig.features, contact: true}});
     expect(() => validateClientConfig(config)).toThrow('requires a phone number');
   });
 });

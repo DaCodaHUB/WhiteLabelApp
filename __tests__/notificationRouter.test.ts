@@ -1,10 +1,11 @@
 import {createNotificationRouter, parseNotificationPayload, routeNotification, type NotificationNavigator} from '../src/app/notifications';
 import {defaultConfig} from '../src/app/config/defaultConfig';
+import type {ClientConfig} from '../src/app/config/types';
 
-function dependencies(options: {ready?: boolean; baseUrl?: string; canOpen?: boolean} = {}) {
+function dependencies(options: {ready?: boolean; baseUrl?: string; canOpen?: boolean; features?: Partial<ClientConfig['features']>} = {}) {
   const navigation: NotificationNavigator = {isReady: jest.fn(() => options.ready ?? true), openHome: jest.fn(), openWebContent: jest.fn(), openNative: jest.fn()};
   const linking = {canOpenUrl: jest.fn(async () => options.canOpen ?? true), openUrl: jest.fn(async (): Promise<void> => undefined)};
-  return {config: {...defaultConfig, website: {...defaultConfig.website, baseUrl: options.baseUrl ?? defaultConfig.website.baseUrl}}, navigation, linking};
+  return {config: {...defaultConfig, website: {...defaultConfig.website, baseUrl: options.baseUrl ?? defaultConfig.website.baseUrl}, features: {...defaultConfig.features, notifications: true, ...options.features}}, navigation, linking};
 }
 
 describe('notification routing', () => {
@@ -48,6 +49,21 @@ describe('notification routing', () => {
   test('ignores malformed payload without navigation', async () => {
     const deps = dependencies();
     expect((await createNotificationRouter(deps).handle({type: 'home'})).status).toBe('ignored');
+    expect(deps.navigation.openHome).not.toHaveBeenCalled();
+  });
+  test.each([
+    ['openWeb', {version: 1, type: 'openWeb', route: '/'}, {webContent: false}],
+    ['openNative', {version: 1, type: 'openNative', destination: 'settings'}, {settings: false}],
+  ])('ignores disabled %s destination without reinterpreting it', async (_name, payload, features) => {
+    const deps = dependencies({features});
+    expect(await createNotificationRouter(deps).handle(payload)).toEqual({status: 'ignored', reason: 'destination-disabled'});
+    expect(deps.navigation.openHome).not.toHaveBeenCalled();
+    expect(deps.navigation.openWebContent).not.toHaveBeenCalled();
+    expect(deps.navigation.openNative).not.toHaveBeenCalled();
+  });
+  test('ignores all notification routes when notifications are disabled', async () => {
+    const deps = dependencies({features: {notifications: false}});
+    expect(await createNotificationRouter(deps).handle({version: 1, type: 'home'})).toEqual({status: 'ignored', reason: 'notifications-disabled'});
     expect(deps.navigation.openHome).not.toHaveBeenCalled();
   });
   test('prevents concurrent duplicate processing', async () => {

@@ -46,13 +46,8 @@ export const defaultConfig = {
     namespace: 'default-client',
   },
   features: {
-    nativeHome: true,
     webContent: true,
     notifications: false,
-    appointments: false,
-    authentication: false,
-    ecommerce: false,
-    loyalty: false,
     contact: false,
     location: false,
     sharing: false,

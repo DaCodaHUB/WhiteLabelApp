@@ -19,6 +19,7 @@ test('Test Lab availability follows the development build guard', () => {
 
 test('actions delegate to existing home and notification navigation services', async () => {
   const deps = dependencies();
+  deps.config = {...demoConfig, features: {...demoConfig.features, notifications: true}};
   await executeTestLabAction('allowedRoute', deps);
   await executeTestLabAction('phone', deps);
   await executeTestLabAction('settings', deps);
@@ -32,6 +33,19 @@ test('actions delegate to existing home and notification navigation services', a
   expect(deps.notificationNavigation.openWebContent).toHaveBeenCalledWith('https://dacodahub.github.io/', 'Example services');
   expect(deps.notificationNavigation.openNative).toHaveBeenCalledWith('settings');
   expect(deps.notificationNavigation.openHome).toHaveBeenCalled();
+});
+
+test('demo Test Lab notification buttons cannot route while notifications are disabled', async () => {
+  const deps = dependencies();
+  expect(await executeTestLabAction('notificationWeb', deps)).toMatchObject({status: 'ignored', detail: 'notifications-disabled'});
+  expect(deps.notificationNavigation.openWebContent).not.toHaveBeenCalled();
+});
+
+test('Test Lab internal web action also respects the WebContent flag', async () => {
+  const deps = dependencies();
+  deps.config = {...demoConfig, features: {...demoConfig.features, webContent: false}};
+  expect(await executeTestLabAction('internalWebView', deps)).toMatchObject({status: 'unsupported'});
+  expect(deps.homeNavigation.openWebContent).not.toHaveBeenCalled();
 });
 
 test('malformed notification payload does not navigate', async () => {

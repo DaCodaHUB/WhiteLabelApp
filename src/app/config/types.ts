@@ -94,13 +94,8 @@ export type ClientConfig = {
     namespace: string;
   };
   features: {
-    nativeHome: boolean;
     webContent: boolean;
     notifications: boolean;
-    appointments: boolean;
-    authentication: boolean;
-    ecommerce: boolean;
-    loyalty: boolean;
     contact: boolean;
     location: boolean;
     sharing: boolean;
