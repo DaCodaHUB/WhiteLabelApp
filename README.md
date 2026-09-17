@@ -11,12 +11,12 @@ The source follows Clean Architecture dependency direction:
 - `src/infrastructure`: external SDK adapters such as OneSignal.
 - `src/app`: composition root, providers, validation, and client configuration.
 - `src/presentation`: navigation, screens, components, and theme exports.
-- `src/assets/clients`: assets grouped by client identifier.
+- `clients/<client-id>/assets`: client-owned source artwork; preparation generates runtime and native copies.
 - `src/shared`: cross-cutting constants and utilities.
 
 ## Client packaging
 
-Clients are isolated under `clients/<client-id>/`; no global search-and-replace is used. Each directory contains `client.config.ts` (runtime features and branding), `client.native.json` (build identifiers), `environment.development.ts` and `environment.production.ts` (public environment values), plus `assets/README.md`. `src/generated/activeClient.ts` imports exactly one client and one environment, so Metro need not discover every client. Generated files are ignored and must be recreated locally.
+Clients are isolated under `clients/<client-id>/`; no global search-and-replace is used. Each directory contains `client.config.ts` (runtime features and branding), `client.native.json` (build identifiers), `environment.development.ts` and `environment.production.ts` (public website values), plus `assets/README.md`. `src/generated/activeClient.ts` imports exactly one client and one environment, so Metro need not discover every client. Generated files are ignored and must be recreated locally.
 
 Development defaults to the fictional `demo` client. Production requires an explicit `--client` or `APP_CLIENT`, rejects `demo`, and requires all production source assets. Selection occurs before Metro/native compilation and is not mutable from JavaScript at runtime. `APP_ENVIRONMENT` may be `development` or `production`; unknown values fail.
 
@@ -42,7 +42,7 @@ Android reads `android/client.generated.properties`; Gradle applies the applicat
 
 Preparation also emits the ignored `ios/client.generated.xcconfig` with the bundle ID, display name, and URL scheme. The shared `WhiteLabelApp` Xcode target uses checked-in Debug and Release xcconfig wrappers that include both the matching CocoaPods settings and this generated file. `Info.plist` resolves those values at build time. Run `client:prepare` before opening/building the Xcode workspace, and run `bundle exec pod install` on macOS when setting up dependencies. The Xcode target and scheme remain `WhiteLabelApp` for every client; signing and team selection remain separate. Verify the resolved build settings, processed `Info.plist`, URL registration, and signing in Xcode on macOS before release. iOS builds have not been verified from this Windows environment.
 
-Production artwork source files under `clients/<id>/assets/` are `app-icon.png` (exactly 1024×1024 opaque PNG), `splash-logo.png` (at least 1200×1200 transparent PNG), and `brand-logo.png` (at least 512 px wide with transparency). Preparation validates them, resizes Android launcher and splash resources and iOS icon and launch resources, and copies the runtime logo to a fixed generated path used by Metro. No shared asset registry needs editing for a new client. Development generates generic placeholders when all three source files are absent; a partial set is an error. Generated artwork paths are ignored by Git and replaced on every client switch.
+Production artwork source files under `clients/<id>/assets/` are `app-icon.png` (exactly 1024×1024 opaque PNG), `splash-logo.png` (at least 1200×1200 transparent PNG), and `brand-logo.png` (at least 512 px wide with transparency). Preparation validates them, generates density-specific Android launcher and splash resources, creates iOS AppIcon and launch resources, and copies the runtime logo to `src/generated/brand-logo.png` for Metro. No shared asset registry needs editing for a new client. Development generates generic placeholders when all three source files are absent; a partial set is an error. Generated artwork paths are ignored by Git and replaced on every client switch.
 
 Never put credentials in TypeScript, JSON metadata, environment modules, or generated output. Client credential directories, Firebase files, keystores, signing properties, APNs keys/certificates, provisioning profiles, and common private-key formats are ignored. OneSignal REST keys belong only in protected backend infrastructure. Example/readme files remain trackable; real credential filenames are never created by these tools.
 
@@ -76,6 +76,8 @@ home: {
 ```
 
 Home action execution is centralized in `src/app/homeActions` and connected to React Navigation by `useHomeActionExecutor`. The Home screen only renders configuration, delegates presses, and displays safe recoverable errors. A per-hook execution lock prevents rapid duplicate actions.
+
+Home hides actions whose required feature is disabled. The executor checks availability again before invoking navigation or a native service. Client validation rejects enabled actions that require a disabled feature.
 
 Action behavior and fallback rules:
 
@@ -159,7 +161,7 @@ After credentials are configured outside this template, test first-launch permis
 
 ## Native configuration
 
-1. Use Node 22.13+ (the version is captured in `.nvmrc`).
+1. Use the Node 22.13.0 version pinned in `.nvmrc` (the declared package minimum is 22.11.0).
 2. Run `npm install`.
 3. On macOS, run `bundle install && bundle exec pod install` from `ios`.
 4. Complete the platform credentials/capabilities required by OneSignal only when enabling client push notifications.
@@ -225,7 +227,7 @@ To add a future message type, extend the config union and parser, add an injecte
 
 ## Development demo and Test Lab
 
-Development builds select `src/development/demoConfig.ts`. It contains only reserved `.example` domains, 555 fictional contact data, generic sample copy, an isolated storage namespace, and no push credentials. Release builds continue to use the normal production composition path.
+Development defaults to `clients/demo` unless `--client` or `APP_CLIENT` selects another client. Demo uses `https://dacodahub.github.io/mobile-demo/`, fictional 555 contact data, an isolated storage namespace, and no push credentials. The older `src/development/demoConfig.ts` is a development test fixture; it is not selected by client preparation. Release builds require an explicit non-demo client and its production environment.
 
 When Metro runs with `__DEV__ === true`, the Home screen shows **Open Test Lab** and the navigator registers the typed `TestLab` route. The screen and route are guarded by the compile-time development constant; no Test Lab entry point is rendered in release builds.
 
@@ -237,6 +239,6 @@ To use it:
 2. Open **Open Test Lab** from Home.
 3. Run an action and inspect its safe status under **Last result**.
 
-Some actions launch native applications, so results vary with emulator capabilities. Notifications remain disabled because the demo intentionally has no OneSignal App ID. The notification routing buttons report `notifications-disabled` for valid destinations; malformed payloads still report `invalid-payload`. They do not request permission or contact OneSignal.
+Some actions launch native applications, so results vary with emulator capabilities. With demo selected, notifications remain disabled because it has no OneSignal App ID. The notification routing buttons then report `notifications-disabled` for valid destinations; malformed payloads still report `invalid-payload`. They do not request permission or contact OneSignal.
 
 Run the focused development-environment tests with `npm test -- testLab`. They verify the build guard, production-service delegation, malformed-payload rejection, and fictional-data constraints.
