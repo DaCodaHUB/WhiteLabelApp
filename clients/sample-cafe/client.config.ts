@@ -7,9 +7,9 @@ export const clientConfig = {
   clientId: 'sample-cafe',
   appName: 'Sample Cafe',
   website: {
-    baseUrl: 'https://sample-cafe.example',
-    allowedDomains: ['sample-cafe.example'],
-    routes: {home: '/', services: '/menu', booking: '/order'},
+    baseUrl: 'https://dacodahub.github.io',
+    allowedDomains: ['dacodahub.github.io'],
+    routes: {home: '/mobile-demo/sample-cafe/', services: '/mobile-demo/sample-cafe/menu.html'},
   },
   branding: {
     primaryColor: '#7B3F27',
@@ -23,8 +23,8 @@ export const clientConfig = {
     title: 'Welcome to Sample Cafe',
     subtitle: 'Fresh coffee and a little time to slow down.',
     actions: [
-      {id: 'menu', title: 'View Menu', icon: 'language', type: 'web', route: '/menu'},
-      {id: 'order', title: 'Order Online', icon: 'open-in-new', type: 'web', route: '/order'},
+      {id: 'website', title: 'Visit Sample Cafe', icon: 'language', type: 'web', route: '/mobile-demo/sample-cafe/'},
+      {id: 'menu', title: 'View Menu', icon: 'open-in-new', type: 'web', route: '/mobile-demo/sample-cafe/menu.html'},
       {id: 'call', title: 'Call Us', icon: 'phone', type: 'phone'},
       {id: 'directions', title: 'Directions', icon: 'explore', type: 'maps'},
       {id: 'settings', title: 'Settings', icon: 'settings', type: 'nativeScreen', screen: 'settings'},

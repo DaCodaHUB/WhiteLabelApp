@@ -4,7 +4,10 @@ import packageJson from '../package.json';
 import {clientConfig as demoClientConfig} from '../clients/demo/client.config';
 import {environmentConfig as demoDevelopmentEnvironment} from '../clients/demo/environment.development';
 import {clientConfig as defaultClientConfig} from '../clients/default/client.config';
+import {clientConfig as sampleCafeClientConfig} from '../clients/sample-cafe/client.config';
+import {environmentConfig as sampleCafeDevelopmentEnvironment} from '../clients/sample-cafe/environment.development';
 import {activeClientContent} from '../scripts/clientPackaging';
+import {buildClientUrl, isAllowedClientUrl} from '../src/app/config/url';
 
 type SpawnCall = {
   executable: string;
@@ -104,5 +107,30 @@ describe('demo website selection', () => {
     expect(defaultClientConfig.website).toEqual({
       baseUrl: 'https://example.com', allowedDomains: ['example.com'], routes: {home: '/'},
     });
+  });
+});
+
+describe('Sample Cafe development website selection', () => {
+  it('resolves its Home action to the hosted showcase', () => {
+    const website = {...sampleCafeClientConfig.website, ...sampleCafeDevelopmentEnvironment.website};
+    expect(website).toEqual({
+      baseUrl: 'https://dacodahub.github.io',
+      allowedDomains: ['dacodahub.github.io'],
+      routes: {home: '/mobile-demo/sample-cafe/', services: '/mobile-demo/sample-cafe/menu.html'},
+    });
+    expect(sampleCafeClientConfig.home.actions[0]).toMatchObject({type: 'web', route: website.routes.home});
+    expect(buildClientUrl(website.baseUrl, website.routes.home)).toBe('https://dacodahub.github.io/mobile-demo/sample-cafe/');
+    expect(isAllowedClientUrl('https://dacodahub.github.io/mobile-demo/sample-cafe/', website.allowedDomains)).toBe(true);
+    expect(isAllowedClientUrl('https://other.github.io/mobile-demo/sample-cafe/', website.allowedDomains)).toBe(false);
+    expect(isAllowedClientUrl('https://dacodahub.github.io.evil.example/', website.allowedDomains)).toBe(false);
+  });
+
+  it('keeps Demo and Sample Cafe independent', () => {
+    expect(buildClientUrl(demoClientConfig.website.baseUrl, demoClientConfig.website.routes.home)).toBe('https://dacodahub.github.io/mobile-demo/');
+    expect(demoClientConfig.website.routes.home).toBe('/mobile-demo/');
+    expect(sampleCafeClientConfig.clientId).not.toBe(demoClientConfig.clientId);
+    expect(sampleCafeClientConfig.storage.namespace).not.toBe(demoClientConfig.storage.namespace);
+    expect(activeClientContent('sample-cafe', 'development')).toContain("import {clientConfig} from '../../clients/sample-cafe/client.config';");
+    expect(activeClientContent('sample-cafe', 'development')).toContain("import {environmentConfig} from '../../clients/sample-cafe/environment.development';");
   });
 });
