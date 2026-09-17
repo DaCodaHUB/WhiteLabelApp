@@ -11,14 +11,14 @@ The source follows Clean Architecture dependency direction:
 - `src/infrastructure`: external SDK adapters such as OneSignal.
 - `src/app`: composition root, providers, validation, and client configuration.
 - `src/presentation`: navigation, screens, components, and theme exports.
-- `src/assets/clients`: assets grouped by client identifier.
+- `clients/<client-id>/assets`: client-owned source artwork; preparation generates runtime and native copies.
 - `src/shared`: cross-cutting constants and utilities.
 
 ## Client packaging
 
 Clients are isolated under `clients/<client-id>/`; no global search-and-replace is used. Each directory contains `client.config.ts` (runtime features and branding), `client.native.json` (build identifiers), `environment.development.ts` and `environment.production.ts` (public environment values), plus `assets/README.md`. `src/generated/activeClient.ts` imports exactly one client and one environment, so Metro need not discover every client. Generated files are ignored and must be recreated locally.
 
-Development defaults to the fictional `demo` client. Production requires an explicit `--client` or `APP_CLIENT`, rejects `demo`, and requires all production source assets. Selection occurs before Metro/native compilation and is not mutable from JavaScript at runtime. `APP_ENVIRONMENT` may be `development` or `production`; unknown values fail.
+Development defaults to the fictional `demo` client. `clients/sample-cafe` is a second development example with different actions, branding, and artwork; its example website and placeholder details must be replaced before real use. Production requires an explicit `--client` or `APP_CLIENT`, rejects `demo`, and requires all production source assets. Selection occurs before Metro/native compilation and is not mutable from JavaScript at runtime. `APP_ENVIRONMENT` may be `development` or `production`; unknown values fail.
 
 Create, validate, prepare, and run a client from PowerShell:
 
@@ -225,7 +225,7 @@ To add a future message type, extend the config union and parser, add an injecte
 
 ## Development demo and Test Lab
 
-Development builds select `src/development/demoConfig.ts`. It contains only reserved `.example` domains, 555 fictional contact data, generic sample copy, an isolated storage namespace, and no push credentials. Release builds continue to use the normal production composition path.
+Development defaults to the packaged `clients/demo` definition, whose website home route is `https://dacodahub.github.io/mobile-demo/`. `client:prepare` generates the active client module, and `App.tsx` supplies that configuration to Test Lab through the same provider used by the rest of the app. Demo has fictional 555 contact data, an isolated storage namespace, and no push credentials. There is no separate development demo configuration. Release builds use an explicit non-demo client and its production environment.
 
 When Metro runs with `__DEV__ === true`, the Home screen shows **Open Test Lab** and the navigator registers the typed `TestLab` route. The screen and route are guarded by the compile-time development constant; no Test Lab entry point is rendered in release builds.
 
@@ -237,6 +237,6 @@ To use it:
 2. Open **Open Test Lab** from Home.
 3. Run an action and inspect its safe status under **Last result**.
 
-Some actions launch native applications, so results vary with emulator capabilities. Notifications remain disabled because the demo intentionally has no OneSignal App ID. The notification routing buttons report `notifications-disabled` for valid destinations; malformed payloads still report `invalid-payload`. They do not request permission or contact OneSignal.
+Some actions launch native applications, so results vary with emulator capabilities. With demo selected, notifications remain disabled because it has no OneSignal App ID. The notification routing buttons then report `notifications-disabled` for valid destinations; malformed payloads still report `invalid-payload`. They do not request permission or contact OneSignal.
 
 Run the focused development-environment tests with `npm test -- testLab`. They verify the build guard, production-service delegation, malformed-payload rejection, and fictional-data constraints.

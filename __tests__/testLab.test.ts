@@ -1,11 +1,11 @@
-import {demoConfig} from '../src/development/demoConfig';
+import {clientConfig as demoClientConfig} from '../clients/demo/client.config';
 import {executeTestLabAction} from '../src/development/testLab/executeTestLabAction';
 import {isTestLabAvailable} from '../src/presentation/navigation/developmentGate';
 import type {TestLabDependencies} from '../src/development/testLab/types';
 
 function dependencies(): TestLabDependencies {
   return {
-    config: demoConfig,
+    config: demoClientConfig,
     linking: {canOpenUrl: jest.fn(async () => true), openUrl: jest.fn(async () => undefined)},
     homeNavigation: {openWebContent: jest.fn(), openNativeScreen: jest.fn()},
     notificationNavigation: {isReady: jest.fn(() => true), openHome: jest.fn(), openWebContent: jest.fn(), openNative: jest.fn()},
@@ -19,7 +19,7 @@ test('Test Lab availability follows the development build guard', () => {
 
 test('actions delegate to existing home and notification navigation services', async () => {
   const deps = dependencies();
-  deps.config = {...demoConfig, features: {...demoConfig.features, notifications: true}};
+  deps.config = {...demoClientConfig, features: {...demoClientConfig.features, notifications: true}};
   await executeTestLabAction('allowedRoute', deps);
   await executeTestLabAction('phone', deps);
   await executeTestLabAction('settings', deps);
@@ -43,7 +43,7 @@ test('demo Test Lab notification buttons cannot route while notifications are di
 
 test('Test Lab internal web action also respects the WebContent flag', async () => {
   const deps = dependencies();
-  deps.config = {...demoConfig, features: {...demoConfig.features, webContent: false}};
+  deps.config = {...demoClientConfig, features: {...demoClientConfig.features, webContent: false}};
   expect(await executeTestLabAction('internalWebView', deps)).toMatchObject({status: 'unsupported'});
   expect(deps.homeNavigation.openWebContent).not.toHaveBeenCalled();
 });
@@ -56,13 +56,13 @@ test('malformed notification payload does not navigate', async () => {
   expect(deps.notificationNavigation.openNative).not.toHaveBeenCalled();
 });
 
-test('demo configuration contains only reserved fictional contact data and no credentials', () => {
-  expect(demoConfig.website.baseUrl).toBe('https://dacodahub.github.io');
-  expect(demoConfig.website.allowedDomains).toEqual(['dacodahub.github.io']);
-  expect(demoConfig.website.routes.home).toBe('/mobile-demo/');
-  expect(demoConfig.contact.email.endsWith('@dacodahub.github.io')).toBe(true);
-  expect(demoConfig.contact.phone).toContain('555');
-  expect(demoConfig.contact.address).toContain('Example');
-  expect('oneSignalAppId' in demoConfig.notifications).toBe(false);
-  expect(JSON.stringify(demoConfig)).not.toMatch(/api[_-]?key|secret|credential/i);
+test('packaged demo configuration contains fictional contact data and no credentials', () => {
+  expect(demoClientConfig.website.baseUrl).toBe('https://dacodahub.github.io');
+  expect(demoClientConfig.website.allowedDomains).toEqual(['dacodahub.github.io']);
+  expect(demoClientConfig.website.routes.home).toBe('/mobile-demo/');
+  expect(demoClientConfig.contact.email?.endsWith('@dacodahub.github.io')).toBe(true);
+  expect(demoClientConfig.contact.phone).toContain('555');
+  expect(demoClientConfig.contact.address).toContain('Example');
+  expect('oneSignalAppId' in demoClientConfig.notifications).toBe(false);
+  expect(JSON.stringify(demoClientConfig)).not.toMatch(/api[_-]?key|secret|credential/i);
 });
