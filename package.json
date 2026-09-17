@@ -13,7 +13,7 @@
     "client:list": "node scripts/clientList.js",
     "client:validate": "node scripts/clientValidate.js",
     "client:prepare": "node scripts/clientPrepare.js",
-    "android:demo": "node scripts/clientPrepare.js --client demo --environment development && npx react-native run-android",
+    "android:demo": "node scripts/clientRun.js android --client demo",
     "android:build:demo": "node scripts/clientPrepare.js --client demo --environment development && cd android && .\\gradlew.bat assembleDebug"
   },
   "dependencies": {

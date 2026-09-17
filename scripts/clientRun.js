@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const path = require('path');
 const {spawn} = require('child_process');
-const {parseClientArguments, resolveClientSelection} = require('./clientPackaging');
+const {parseClientArguments, resolveClientSelection, validateClientProject} = require('./clientPackaging');
 
 const SUPPORTED_COMMANDS = new Set(['android', 'ios', 'start']);
 const CLI_COMMANDS = {android: 'run-android', ios: 'run-ios', start: 'start'};
@@ -57,6 +57,11 @@ async function runClientCommand(argv, dependencies = {}) {
     return 1;
   }
 
+  if (command === 'android' && forwardedArgs.some(arg => /^--appId(?:=|$)|^--appIdSuffix(?:=|$)/.test(arg))) {
+    console.error('Android application ID is selected by --client; do not pass --appId or --appIdSuffix.');
+    return 1;
+  }
+
   const childEnvironment = {
     ...environmentSource,
     APP_CLIENT: selected.clientId,
@@ -75,10 +80,20 @@ async function runClientCommand(argv, dependencies = {}) {
 
   const cliPath = path.join(workspaceRoot, 'node_modules', 'react-native', 'cli.js');
   const cliCommand = CLI_COMMANDS[command];
+  let androidArgs = [];
+  if (command === 'android') {
+    try {
+      const {native} = validateClientProject({workspaceRoot, clientId: selected.clientId, environment: selected.environment});
+      androidArgs = ['--appId', native.android.applicationId];
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 1;
+    }
+  }
   return spawnAndWait(
     spawnProcess,
     process.execPath,
-    [cliPath, cliCommand, ...forwardedArgs],
+    [cliPath, cliCommand, ...androidArgs, ...forwardedArgs],
     childOptions,
     `React Native ${command}`,
   );
