@@ -2,8 +2,9 @@ import {EventEmitter} from 'events';
 import * as path from 'path';
 import packageJson from '../package.json';
 import {clientConfig as demoClientConfig} from '../clients/demo/client.config';
+import {environmentConfig as demoDevelopmentEnvironment} from '../clients/demo/environment.development';
 import {clientConfig as defaultClientConfig} from '../clients/default/client.config';
-import {activeClientConfig} from '../src/generated/activeClient';
+import {activeClientContent} from '../scripts/clientPackaging';
 
 type SpawnCall = {
   executable: string;
@@ -89,7 +90,14 @@ describe('demo website selection', () => {
       routes: {home: '/mobile-demo/'},
     });
     expect(demoClientConfig.home.actions[0]).toMatchObject({type: 'web', route: '/mobile-demo/'});
-    expect(activeClientConfig.website.routes.home).toBe('/mobile-demo/');
+    expect(demoDevelopmentEnvironment.website).toEqual({
+      baseUrl: demoClientConfig.website.baseUrl,
+      allowedDomains: demoClientConfig.website.allowedDomains,
+    });
+    const generated = activeClientContent('demo', 'development');
+    expect(generated).toContain("import {clientConfig} from '../../clients/demo/client.config';");
+    expect(generated).toContain("import {environmentConfig} from '../../clients/demo/environment.development';");
+    expect(generated).toContain('website: {...clientConfig.website, ...environmentConfig.website},');
   });
 
   it('does not change the production-default client website', () => {
