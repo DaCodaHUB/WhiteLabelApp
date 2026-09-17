@@ -6,6 +6,7 @@ import {
   generateActiveClientModule,
   generateAndroidClientProperties,
   iosConfigContent,
+  parseClientArguments,
   parseClientNativeConfig,
   resolveClientSelection,
   validateClientNativeConfig,
@@ -62,10 +63,34 @@ describe('client packaging helpers', () => {
   });
 
   it('defaults development selection to demo and requires explicit selection in production', () => {
-    expect(resolveClientSelection({environment: 'development', cwd: process.cwd()})).toMatchObject({clientId: 'demo'});
-    expect(() => resolveClientSelection({environment: 'production', cwd: process.cwd()})).toThrow(/explicit/i);
+    expect(resolveClientSelection({environment: 'development', cwd: process.cwd(), env: {}})).toMatchObject({clientId: 'demo'});
+    expect(() => resolveClientSelection({environment: 'production', cwd: process.cwd(), env: {}})).toThrow(/explicit/i);
     expect(resolveClientSelection({environment: 'production', clientId: 'demo', cwd: process.cwd()})).toMatchObject({clientId: 'demo'});
     expect(() => validateClientProject({workspaceRoot: process.cwd(), clientId: 'demo', environment: 'production'})).toThrow(/development-only/);
+  });
+
+  it('parses named and positional client selection without dropping an explicit value', () => {
+    expect(parseClientArguments(['--client', 'sample-cafe', '--environment', 'development'])).toEqual({clientId: 'sample-cafe', environment: 'development', forwardedArgs: []});
+    expect(parseClientArguments(['sample-cafe', 'development'])).toEqual({clientId: 'sample-cafe', environment: 'development', forwardedArgs: []});
+    expect(parseClientArguments(['--client=demo', '--environment=development'])).toEqual({clientId: 'demo', environment: 'development', forwardedArgs: []});
+    expect(resolveClientSelection({environment: 'development', clientId: 'sample-cafe', env: {APP_CLIENT: 'demo'}, cwd: process.cwd()})).toMatchObject({clientId: 'sample-cafe'});
+  });
+
+  it.each([
+    [['--client'], /--client requires a value/],
+    [['--client', '--environment', 'development'], /--client requires a value/],
+    [['--environment'], /--environment requires a value/],
+    [['--environment', 'staging'], /Unsupported environment/],
+    [['--client', 'demo', '--client', 'sample-cafe'], /Conflicting --client/],
+    [['--environment', 'development', '--environment', 'production'], /Conflicting --environment/],
+    [['--client-id', 'sample-cafe'], /Unknown client argument/],
+  ])('rejects malformed selection arguments %j', (args, message) => {
+    expect(() => parseClientArguments(args as string[])).toThrow(message as RegExp);
+  });
+
+  it('rejects unknown clients and never substitutes Demo', () => {
+    expect(() => resolveClientSelection({environment: 'development', clientId: 'sample-caffee', env: {APP_CLIENT: 'demo'}, cwd: process.cwd()})).toThrow(/Unknown client/);
+    expect(() => resolveClientSelection({environment: 'development', clientId: '', env: {APP_CLIENT: 'sample-cafe'}, cwd: process.cwd()})).toThrow(/cannot be empty/);
   });
 
   it('creates a client directory structure without overwriting existing files', () => {

@@ -31,10 +31,11 @@ npm run client:create -- `
 
 npm run client:validate -- --client sample-business
 npm run client:prepare -- --client sample-business --environment development
-$env:APP_CLIENT = "sample-business"
-$env:APP_ENVIRONMENT = "development"
-npm run android
+npm run android -- --client sample-business
+npm start -- --client sample-business --reset-cache
 ```
+
+Client and environment selection use `--client <id>` and `--environment <development|production>`. Explicit CLI values take precedence over `APP_CLIENT` and `APP_ENVIRONMENT`; development defaults to Demo when no client is selected. `client:prepare` and `client:validate` also accept positional `<id> <environment>` arguments for compatibility with npm versions that pass those values without their flag names. Missing, conflicting, or unknown selection values fail before preparation. React Native options such as `--deviceId` and `--reset-cache` pass through the runner.
 
 `npm run client:list` prints IDs, display names, paths, and development validation status without dumping configuration. `npm run android`, `ios`, and `start` prepare first; `npm run android:demo` is the explicit demo shortcut. For release preparation use `npm run client:prepare -- --client <id> --environment production` before the native release build.
 
