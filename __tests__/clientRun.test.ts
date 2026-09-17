@@ -1,6 +1,8 @@
 import {EventEmitter} from 'events';
 import * as path from 'path';
 import packageJson from '../package.json';
+import demoNative from '../clients/demo/client.native.json';
+import sampleCafeNative from '../clients/sample-cafe/client.native.json';
 import {clientConfig as demoClientConfig} from '../clients/demo/client.config';
 import {environmentConfig as demoDevelopmentEnvironment} from '../clients/demo/environment.development';
 import {clientConfig as defaultClientConfig} from '../clients/default/client.config';
@@ -43,7 +45,9 @@ describe('client-aware React Native runner', () => {
 
     expect(calls).toHaveLength(2);
     expect(calls[0]?.args[0]).toMatch(/clientPrepare\.js$/);
-    expect(calls[1]?.args.slice(-1)).toEqual([command === 'android' ? 'run-android' : 'start']);
+    expect(calls[1]?.args.slice(1)).toEqual(command === 'android'
+      ? ['run-android', '--appId', demoNative.android.applicationId]
+      : ['start']);
     expect(calls[1]?.args[0]).toBe(path.join(process.cwd(), 'node_modules', 'react-native', 'cli.js'));
   });
 
@@ -56,13 +60,13 @@ describe('client-aware React Native runner', () => {
     });
 
     expect(result).toBe(23);
-    expect(calls[1]?.args.slice(1)).toEqual(['run-android', '--deviceId', 'emulator-5554']);
+    expect(calls[1]?.args.slice(1)).toEqual(['run-android', '--appId', demoNative.android.applicationId, '--deviceId', 'emulator-5554']);
     expect(calls[1]?.options).toMatchObject({stdio: 'inherit'});
     expect(calls[1]?.options.env).toMatchObject({APP_CLIENT: 'demo', APP_ENVIRONMENT: 'development', RUNNER_TEST_VALUE: 'kept'});
   });
 
   it.each([
-    ['android', ['--client', 'sample-cafe', '--deviceId', 'emulator-5554'], ['run-android', '--deviceId', 'emulator-5554']],
+    ['android', ['--client', 'sample-cafe', '--deviceId', 'emulator-5554'], ['run-android', '--appId', sampleCafeNative.android.applicationId, '--deviceId', 'emulator-5554']],
     ['start', ['--client', 'sample-cafe', '--reset-cache'], ['start', '--reset-cache']],
   ])('prepares explicit Sample Cafe before %s and forwards native options', async (command, args, forwarded) => {
     const calls: SpawnCall[] = [];
@@ -80,6 +84,7 @@ describe('client-aware React Native runner', () => {
       await expect(runClientCommand(['android', ...args], {workspaceRoot: process.cwd(), env: {...process.env, APP_CLIENT: 'sample-cafe'}, spawn: successfulSpawn(calls)})).resolves.toBe(0);
       expect(calls[0]?.args).toContain('demo');
       expect(calls[1]?.options.env.APP_CLIENT).toBe('demo');
+      expect(calls[1]?.args.slice(1)).toEqual(['run-android', '--appId', demoNative.android.applicationId]);
     }
   });
 
@@ -106,6 +111,20 @@ describe('client-aware React Native runner', () => {
     }
   });
 
+  it.each(['--appId', '--appId=com.unrelated.app', '--appIdSuffix'])('rejects a conflicting Android launch override: %s', async option => {
+    const calls: SpawnCall[] = [];
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await expect(runClientCommand(['android', '--client', 'sample-cafe', option], {
+        workspaceRoot: process.cwd(), env: {...process.env}, spawn: successfulSpawn(calls),
+      })).resolves.toBe(1);
+      expect(calls).toHaveLength(0);
+      expect(error).toHaveBeenCalledWith(expect.stringContaining('do not pass --appId'));
+    } finally {
+      error.mockRestore();
+    }
+  });
+
   it('does not launch React Native when preparation fails', async () => {
     const calls: SpawnCall[] = [];
     await expect(runClientCommand(['start'], {
@@ -127,6 +146,7 @@ describe('client-aware React Native runner', () => {
     expect(packageJson.scripts.android).toBe('node scripts/clientRun.js android');
     expect(packageJson.scripts.start).toBe('node scripts/clientRun.js start');
     expect(packageJson.scripts.android).not.toContain('npm run android');
+    expect(packageJson.scripts['android:demo']).toBe('node scripts/clientRun.js android --client demo');
   });
 });
 
