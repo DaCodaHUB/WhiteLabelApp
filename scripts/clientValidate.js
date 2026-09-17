@@ -1,31 +1,13 @@
 #!/usr/bin/env node
 const path = require('path');
-const {validateClientProject, loadClientArtwork, resolveClientSelection} = require('./clientPackaging');
-
-function parseArgs(argv) {
-  const args = {};
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (!token.startsWith('--')) continue;
-    const key = token.slice(2);
-    const value = argv[index + 1] && !argv[index + 1].startsWith('--') ? argv[index + 1] : '';
-    args[key] = value;
-    if (value && argv[index + 1] && !argv[index + 1].startsWith('--')) index += 1;
-  }
-  return args;
-}
-
-const options = parseArgs(process.argv.slice(2));
-if (options.environment && !['development', 'production'].includes(options.environment)) {
-  console.error("--environment must be 'development' or 'production'.");
-  process.exit(1);
-}
-const environment = options.environment || 'development';
-const selected = resolveClientSelection({environment, clientId: options.client || options.id, cwd: path.resolve(__dirname, '..')});
+const {parseClientArguments, validateClientProject, loadClientArtwork, resolveClientSelection} = require('./clientPackaging');
 try {
   const workspaceRoot = path.resolve(__dirname, '..');
-  const validation = validateClientProject({workspaceRoot, clientId: selected.clientId, environment});
-  loadClientArtwork(path.join(workspaceRoot, 'clients', selected.clientId), environment, validation.runtime.branding.primaryColor).then(() => {
+  const options = parseClientArguments(process.argv.slice(2));
+  const environment = options.environment ?? process.env.APP_ENVIRONMENT ?? 'development';
+  const selected = resolveClientSelection({environment, clientId: options.clientId, cwd: workspaceRoot});
+  const validation = validateClientProject({workspaceRoot, clientId: selected.clientId, environment: selected.environment});
+  loadClientArtwork(path.join(workspaceRoot, 'clients', selected.clientId), selected.environment, validation.runtime.branding.primaryColor).then(() => {
     console.log(`Client '${selected.clientId}' validates successfully.`);
   }).catch(error => {
     console.error(error instanceof Error ? error.message : String(error));

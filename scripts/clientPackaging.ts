@@ -14,7 +14,8 @@ export type ClientNativeConfig = {
 export type ClientEnvironmentConfig = {
   website: {baseUrl: string; allowedDomains: string[]};
 };
-export type ResolveClientSelectionOptions = {environment: ClientEnvironment; clientId?: string; cwd?: string};
+export type ResolveClientSelectionOptions = {environment: ClientEnvironment; clientId?: string; cwd?: string; env?: NodeJS.ProcessEnv};
+export type ParsedClientArguments = {clientId?: string; environment?: ClientEnvironment; forwardedArgs: string[]};
 export type CreateClientDefinitionOptions = {workspaceRoot: string; clientId: string; displayName: string; androidApplicationId: string; iosBundleIdentifier: string};
 export type ValidateClientProjectOptions = {workspaceRoot: string; clientId: string; environment: ClientEnvironment};
 
@@ -59,8 +60,61 @@ export function validateClientNativeConfig(config: ClientNativeConfig): void {
   if (identifiers.some(item => /placeholder|changeme|your[-_.]?company/i.test(item))) throw new Error('native metadata contains a reserved placeholder value');
 }
 
+export function parseClientArguments(argv: string[], forwardUnknown = false): ParsedClientArguments {
+  let clientId: string | undefined;
+  let environment: string | undefined;
+  const positional: string[] = [];
+  const forwardedArgs: string[] = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index] as string;
+    if (token === '--' && forwardUnknown) {
+      forwardedArgs.push(...argv.slice(index + 1));
+      break;
+    }
+    if (token.startsWith('--')) {
+      const match = /^--([^=]+)(?:=(.*))?$/.exec(token);
+      const key = match?.[1];
+      if (key === 'client' || key === 'environment') {
+        const value = match?.[2] ?? argv[++index];
+        if (!value || value.startsWith('-')) throw new Error(`--${key} requires a value.`);
+        if (key === 'client') {
+          if (clientId !== undefined && clientId !== value) throw new Error('Conflicting --client values.');
+          clientId = value;
+        } else {
+          if (environment !== undefined && environment !== value) throw new Error('Conflicting --environment values.');
+          environment = value;
+        }
+        continue;
+      }
+      if (!forwardUnknown || /^(?:cli|env|id)/.test(key ?? '')) throw new Error(`Unknown client argument '${token}'.`);
+      forwardedArgs.push(token);
+      if (!token.includes('=') && argv[index + 1] && !argv[index + 1]?.startsWith('-')) forwardedArgs.push(argv[++index] as string);
+      continue;
+    }
+    if (token.startsWith('-')) {
+      if (!forwardUnknown) throw new Error(`Unknown client argument '${token}'.`);
+      forwardedArgs.push(token);
+      continue;
+    }
+    positional.push(token);
+  }
+  if (positional.length > 2) throw new Error('Too many positional client arguments.');
+  if (positional[0]) {
+    if (clientId !== undefined && clientId !== positional[0]) throw new Error('Conflicting client values.');
+    clientId = positional[0];
+  }
+  if (positional[1]) {
+    if (environment !== undefined && environment !== positional[1]) throw new Error('Conflicting environment values.');
+    environment = positional[1];
+  }
+  if (environment !== undefined && environment !== 'development' && environment !== 'production') throw new Error(`Unsupported environment '${environment}'. Use development or production.`);
+  return {clientId, environment: environment as ClientEnvironment | undefined, forwardedArgs};
+}
+
 export function resolveClientSelection(options: ResolveClientSelectionOptions): {clientId: string; environment: ClientEnvironment} {
-  const supplied = options.clientId ?? process.env.APP_CLIENT;
+  if (options.environment !== 'development' && options.environment !== 'production') throw new Error(`Unsupported environment '${options.environment}'. Use development or production.`);
+  const supplied = options.clientId ?? (options.env ?? process.env).APP_CLIENT;
+  if (supplied !== undefined && !supplied.trim()) throw new Error('Client ID cannot be empty.');
   const clientId = supplied?.trim() || (options.environment === 'development' ? 'demo' : '');
   if (!clientId) throw new Error('Production builds require an explicit client via --client or APP_CLIENT.');
   if (!CLIENT_ID.test(clientId)) throw new Error(`Invalid client ID '${clientId}'.`);

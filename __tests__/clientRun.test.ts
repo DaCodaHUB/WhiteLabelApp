@@ -58,6 +58,51 @@ describe('client-aware React Native runner', () => {
     expect(calls[1]?.options.env).toMatchObject({APP_CLIENT: 'demo', APP_ENVIRONMENT: 'development', RUNNER_TEST_VALUE: 'kept'});
   });
 
+  it.each([
+    ['android', ['--client', 'sample-cafe', '--deviceId', 'emulator-5554'], ['run-android', '--deviceId', 'emulator-5554']],
+    ['start', ['--client', 'sample-cafe', '--reset-cache'], ['start', '--reset-cache']],
+  ])('prepares explicit Sample Cafe before %s and forwards native options', async (command, args, forwarded) => {
+    const calls: SpawnCall[] = [];
+    await expect(runClientCommand([command, ...args], {
+      workspaceRoot: process.cwd(), env: {...process.env, APP_CLIENT: 'demo', APP_ENVIRONMENT: 'development'}, spawn: successfulSpawn(calls),
+    })).resolves.toBe(0);
+    expect(calls[0]?.args.slice(-4)).toEqual(['--client', 'sample-cafe', '--environment', 'development']);
+    expect(calls[1]?.args.slice(1)).toEqual(forwarded);
+    expect(calls[1]?.options.env).toMatchObject({APP_CLIENT: 'sample-cafe', APP_ENVIRONMENT: 'development'});
+  });
+
+  it('selects Demo explicitly and accepts positional selection from npm', async () => {
+    for (const args of [['--client', 'demo'], ['demo', 'development']]) {
+      const calls: SpawnCall[] = [];
+      await expect(runClientCommand(['android', ...args], {workspaceRoot: process.cwd(), env: {...process.env, APP_CLIENT: 'sample-cafe'}, spawn: successfulSpawn(calls)})).resolves.toBe(0);
+      expect(calls[0]?.args).toContain('demo');
+      expect(calls[1]?.options.env.APP_CLIENT).toBe('demo');
+    }
+  });
+
+  it('uses explicit CLI environment ahead of APP_ENVIRONMENT', async () => {
+    const calls: SpawnCall[] = [];
+    await expect(runClientCommand(['start', '--client', 'sample-cafe', '--environment', 'development'], {
+      workspaceRoot: process.cwd(), env: {...process.env, APP_CLIENT: 'demo', APP_ENVIRONMENT: 'production'}, spawn: successfulSpawn(calls),
+    })).resolves.toBe(0);
+    expect(calls[0]?.args.slice(-4)).toEqual(['--client', 'sample-cafe', '--environment', 'development']);
+    expect(calls[1]?.options.env).toMatchObject({APP_CLIENT: 'sample-cafe', APP_ENVIRONMENT: 'development'});
+  });
+
+  it.each([
+    ['--client', 'sample-caffee'], ['--client'], ['--environment'], ['--environment', 'staging'], ['--client-id', 'sample-cafe'],
+  ])('rejects invalid selection before preparing: %s', async (...args) => {
+    const calls: SpawnCall[] = [];
+    const error = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      await expect(runClientCommand(['android', ...args], {workspaceRoot: process.cwd(), env: {...process.env, APP_CLIENT: 'demo'}, spawn: successfulSpawn(calls)})).resolves.toBe(1);
+      expect(calls).toHaveLength(0);
+      expect(error).toHaveBeenCalled();
+    } finally {
+      error.mockRestore();
+    }
+  });
+
   it('does not launch React Native when preparation fails', async () => {
     const calls: SpawnCall[] = [];
     await expect(runClientCommand(['start'], {

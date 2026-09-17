@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 const path = require('path');
 const {spawn} = require('child_process');
-const {resolveClientSelection} = require('./clientPackaging');
+const {parseClientArguments, resolveClientSelection} = require('./clientPackaging');
 
 const SUPPORTED_COMMANDS = new Set(['android', 'ios', 'start']);
 const CLI_COMMANDS = {android: 'run-android', ios: 'run-ios', start: 'start'};
@@ -45,15 +45,13 @@ async function runClientCommand(argv, dependencies = {}) {
 
   const workspaceRoot = dependencies.workspaceRoot || path.resolve(__dirname, '..');
   const environmentSource = dependencies.env || process.env;
-  const environment = environmentSource.APP_ENVIRONMENT || 'development';
-  if (environment !== 'development' && environment !== 'production') {
-    console.error(`Unsupported APP_ENVIRONMENT '${environment}'. Use development or production.`);
-    return 1;
-  }
-
   let selected;
+  let forwardedArgs;
   try {
-    selected = resolveClientSelection({environment, clientId: environmentSource.APP_CLIENT, cwd: workspaceRoot});
+    const parsed = parseClientArguments(argv.slice(1), true);
+    const environment = parsed.environment ?? environmentSource.APP_ENVIRONMENT ?? 'development';
+    selected = resolveClientSelection({environment, clientId: parsed.clientId, cwd: workspaceRoot, env: environmentSource});
+    forwardedArgs = parsed.forwardedArgs;
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     return 1;
@@ -80,7 +78,7 @@ async function runClientCommand(argv, dependencies = {}) {
   return spawnAndWait(
     spawnProcess,
     process.execPath,
-    [cliPath, cliCommand, ...argv.slice(1)],
+    [cliPath, cliCommand, ...forwardedArgs],
     childOptions,
     `React Native ${command}`,
   );

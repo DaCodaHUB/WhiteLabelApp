@@ -1,32 +1,15 @@
 #!/usr/bin/env node
 const path = require('path');
-const {resolveClientSelection, validateClientProject, activeClientContent, androidPropertiesContent, androidStringsContent, iosConfigContent, buildClientArtworkFiles, writeFilesAtomically} = require('./clientPackaging');
-
-function parseArgs(argv) {
-  const args = {};
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (!token.startsWith('--')) continue;
-    const key = token.slice(2);
-    const value = argv[index + 1] && !argv[index + 1].startsWith('--') ? argv[index + 1] : '';
-    args[key] = value;
-    if (value && argv[index + 1] && !argv[index + 1].startsWith('--')) index += 1;
-  }
-  return args;
-}
-
-const options = parseArgs(process.argv.slice(2));
-if (options.environment && !['development', 'production'].includes(options.environment)) {
-  console.error("--environment must be 'development' or 'production'.");
-  process.exit(1);
-}
-const environment = options.environment || process.env.APP_ENVIRONMENT || 'development';
-const selected = resolveClientSelection({environment, clientId: options.client || options.id, cwd: path.resolve(__dirname, '..')});
+const {parseClientArguments, resolveClientSelection, validateClientProject, activeClientContent, androidPropertiesContent, androidStringsContent, iosConfigContent, buildClientArtworkFiles, writeFilesAtomically} = require('./clientPackaging');
 const workspaceRoot = path.resolve(__dirname, '..');
 let validation;
+let selected;
 
 try {
-  validation = validateClientProject({workspaceRoot, clientId: selected.clientId, environment});
+  const options = parseClientArguments(process.argv.slice(2));
+  const environment = options.environment ?? process.env.APP_ENVIRONMENT ?? 'development';
+  selected = resolveClientSelection({environment, clientId: options.clientId, cwd: workspaceRoot});
+  validation = validateClientProject({workspaceRoot, clientId: selected.clientId, environment: selected.environment});
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
@@ -37,16 +20,16 @@ const androidPropsPath = path.join(workspaceRoot, 'android', 'client.generated.p
 const androidStringsPath = path.join(workspaceRoot, 'android', 'app', 'src', 'main', 'res', 'values', 'client_generated_strings.xml');
 const iosConfigPath = path.join(workspaceRoot, 'ios', 'client.generated.xcconfig');
 
-buildClientArtworkFiles(workspaceRoot, selected.clientId, environment, validation.runtime.branding).then(artworkFiles => {
+buildClientArtworkFiles(workspaceRoot, selected.clientId, selected.environment, validation.runtime.branding).then(artworkFiles => {
   const nativeConfig = validation.native;
   writeFilesAtomically([
-    {path: activeClientPath, content: activeClientContent(selected.clientId, environment)},
+    {path: activeClientPath, content: activeClientContent(selected.clientId, selected.environment)},
     {path: androidPropsPath, content: androidPropertiesContent(selected.clientId, nativeConfig.displayName, nativeConfig.android)},
     {path: androidStringsPath, content: androidStringsContent(nativeConfig.displayName)},
     {path: iosConfigPath, content: iosConfigContent(selected.clientId, nativeConfig.displayName, nativeConfig.ios)},
     ...artworkFiles,
   ]);
-  console.log(`Prepared client '${selected.clientId}' for ${environment}.`);
+  console.log(`Prepared client '${selected.clientId}' for ${selected.environment}.`);
   console.log('Generated files:');
   console.log(`  - ${path.relative(workspaceRoot, activeClientPath)}`);
   console.log(`  - ${path.relative(workspaceRoot, androidPropsPath)}`);
