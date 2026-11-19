@@ -2,7 +2,6 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import {
-  createClientDefinition,
   generateActiveClientModule,
   generateAndroidClientProperties,
   iosConfigContent,
@@ -91,34 +90,6 @@ describe('client packaging helpers', () => {
   it('rejects unknown clients and never substitutes Demo', () => {
     expect(() => resolveClientSelection({environment: 'development', clientId: 'sample-caffee', env: {APP_CLIENT: 'demo'}, cwd: process.cwd()})).toThrow(/Unknown client/);
     expect(() => resolveClientSelection({environment: 'development', clientId: '', env: {APP_CLIENT: 'sample-cafe'}, cwd: process.cwd()})).toThrow(/cannot be empty/);
-  });
-
-  it('creates a client directory structure without overwriting existing files', () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'client-create-'));
-    const result = createClientDefinition({
-      workspaceRoot: tempRoot,
-      clientId: 'sample-business',
-      displayName: 'Sample Business',
-      androidApplicationId: 'com.example.samplebusiness',
-      iosBundleIdentifier: 'com.example.samplebusiness',
-    });
-
-    expect(result.created).toEqual(['client.config.ts', 'client.native.json', 'environment.development.ts', 'environment.production.ts', 'assets/README.md']);
-    expect(fs.existsSync(path.join(tempRoot, 'clients', 'sample-business', 'client.config.ts'))).toBe(true);
-    expect(fs.existsSync(path.join(tempRoot, 'clients', 'sample-business', 'client.native.json'))).toBe(true);
-    expect(JSON.parse(fs.readFileSync(path.join(tempRoot, 'clients', 'sample-business', 'client.native.json'), 'utf8')).ios).toEqual({
-      bundleIdentifier: 'com.example.samplebusiness', deepLinkScheme: 'samplebusiness',
-    });
-
-    const second = createClientDefinition({
-      workspaceRoot: tempRoot,
-      clientId: 'sample-business',
-      displayName: 'Sample Business',
-      androidApplicationId: 'com.example.samplebusiness',
-      iosBundleIdentifier: 'com.example.samplebusiness',
-    });
-
-    expect(second.created).toEqual([]);
   });
 
   it('generates client-specific iOS values consumed by the shared Xcode target with Pods settings', () => {

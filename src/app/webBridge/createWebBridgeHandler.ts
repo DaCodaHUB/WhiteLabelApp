@@ -12,7 +12,7 @@ export function createWebBridgeHandler(dependencies: WebBridgeDependencies): Web
     const message = parseWebBridgeEventData(data, bridge.maxMessageLength);
     if (!message) return failure('INVALID_MESSAGE', 'The bridge message is invalid.');
     const withId = (value: WebBridgeResult): WebBridgeResult => ({...value, requestId: message.id});
-    if (!bridge.allowedMessageTypes.includes(message.type)) return withId(failure('MESSAGE_NOT_ALLOWED', 'This message type is not allowed.'));
+    if (message.type === 'retired' || !bridge.allowedMessageTypes.includes(message.type)) return withId(failure('MESSAGE_NOT_ALLOWED', 'This message type is not allowed.'));
     if (currentUrl === 'about:blank' || !isAllowedClientUrl(currentUrl, dependencies.config.website.allowedDomains)) {
       return withId(failure('UNAUTHORIZED_PAGE', 'The current page is not authorized.'));
     }

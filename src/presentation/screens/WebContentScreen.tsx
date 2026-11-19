@@ -4,7 +4,6 @@ import {useNavigation} from '@react-navigation/native';
 import type {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {createWebBridgeHandler} from '../../app/webBridge';
 import {useClientConfig} from '../../app/providers/ClientConfigProvider';
-import {useNotifications} from '../../app/providers/NotificationProvider';
 import {reactNativeLinking} from '../../infrastructure/linking/ReactNativeLinking';
 import {reactNativeShareService} from '../../infrastructure/sharing/ReactNativeShareService';
 import {ErrorState} from '../components';
@@ -16,19 +15,12 @@ type Props = Pick<NativeStackScreenProps<RootStackParamList, 'WebContent'>, 'rou
 function BridgeEnabledWebView({uri}: {uri: string}) {
   const config = useClientConfig();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const notifications = useNotifications();
   const bridgeHandler = useMemo(() => createWebBridgeHandler({
     config,
     linking: reactNativeLinking,
     sharing: reactNativeShareService,
     navigation: {openNative: destination => { if (destination === 'settings') navigation.navigate('Settings'); }},
-    notifications: {
-      enabled: notifications.enabled,
-      initialized: notifications.initialized,
-      identify: notifications.identifyNotificationUser,
-      clear: notifications.clearNotificationUser,
-    },
-  }), [config, navigation, notifications]);
+  }), [config, navigation]);
   const bridge = config.webBridge;
   if (!bridge?.enabled) return null;
 

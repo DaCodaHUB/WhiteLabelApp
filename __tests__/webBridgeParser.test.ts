@@ -8,9 +8,13 @@ describe('web bridge parser', () => {
     [{version: 1, type: 'openExternal', url: 'https://outside.test'}, 'openExternal'],
     [{version: 1, type: 'share', message: 'Hello'}, 'share'],
     [{version: 1, type: 'openNative', destination: 'settings'}, 'openNative'],
-    [{version: 1, type: 'identifyNotificationUser', externalId: ' customer_123 '}, 'identifyNotificationUser'],
-    [{version: 1, type: 'clearNotificationUser'}, 'clearNotificationUser'],
   ])('accepts valid message %#', (value, type) => expect(parseWebBridgeMessage(value)?.type).toBe(type));
+
+  test('retired identity data never enters the executable message', () => {
+    expect(parseWebBridgeMessage({version: 1, id: 'legacy', type: 'identifyNotificationUser', externalId: 'private-id'}))
+      .toEqual({type: 'retired', id: 'legacy'});
+    expect(parseWebBridgeMessage({version: 1, id: 'x'.repeat(129), type: 'clearNotificationUser'})).toBeNull();
+  });
 
   test.each([
     ['{', 8192],
@@ -22,8 +26,6 @@ describe('web bridge parser', () => {
     [JSON.stringify({version: 1, type: 'openNative', destination: 'Admin'}), 8192],
     [JSON.stringify({version: 1, type: 'openEmail', subject: 'x'.repeat(257)}), 8192],
     [JSON.stringify({version: 1, type: 'openEmail', body: 'x'.repeat(4001)}), 8192],
-    [JSON.stringify({version: 1, type: 'identifyNotificationUser', externalId: ' '}), 8192],
-    [JSON.stringify({version: 1, type: 'identifyNotificationUser', externalId: 'user@example.com'}), 8192],
     [JSON.stringify({version: 1, type: 'share', message: 'x'.repeat(100)}), 20],
   ])('rejects invalid event data %#', (data, max) => expect(parseWebBridgeEventData(data, max)).toBeNull());
 });

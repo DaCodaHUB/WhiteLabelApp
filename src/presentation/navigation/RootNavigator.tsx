@@ -7,8 +7,6 @@ import {HomeScreen} from '../screens/HomeScreen';
 import {SettingsScreen} from '../screens/SettingsScreen';
 import {WebContentScreen} from '../screens/WebContentScreen';
 import type {RootStackParamList} from './types';
-import {rootNavigationRef} from './notificationNavigation';
-import {useNotifications} from '../../app/providers/NotificationProvider';
 import {isTestLabAvailable} from './developmentGate';
 
 const TestLabScreen = isTestLabAvailable(__DEV__)
@@ -20,7 +18,6 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export function RootNavigator() {
   const config = useClientConfig();
   const appTheme = useAppTheme();
-  const {processPendingNotification} = useNotifications();
   const theme = {
     ...DefaultTheme,
     colors: {
@@ -34,7 +31,7 @@ export function RootNavigator() {
   };
 
   return (
-    <NavigationContainer ref={rootNavigationRef} theme={theme} onReady={() => processPendingNotification()}>
+    <NavigationContainer theme={theme}>
       <Stack.Navigator screenOptions={{headerBackButtonDisplayMode: 'minimal'}}>
         <Stack.Screen
           name="Home"

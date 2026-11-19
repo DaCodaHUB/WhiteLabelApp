@@ -3,7 +3,7 @@ import {WEB_BRIDGE_MESSAGE_TYPES, type WebBridgeMessage} from './types';
 
 const TYPE_SET: ReadonlySet<string> = new Set(WEB_BRIDGE_MESSAGE_TYPES);
 const DESTINATIONS: ReadonlySet<string> = new Set<NativeDestination>(['settings']);
-const LIMITS = {id: 128, contact: 320, short: 256, body: 4000, url: 2048, externalId: 128};
+const LIMITS = {id: 128, contact: 320, short: 256, body: 4000, url: 2048};
 type JsonObject = {[key: string]: unknown};
 
 function object(value: unknown): JsonObject | null {
@@ -25,11 +25,18 @@ function https(value: string): boolean {
   try { return new URL(value).protocol === 'https:'; } catch { return false; }
 }
 
-export function parseWebBridgeMessage(value: unknown): WebBridgeMessage | null {
+type ParsedWebBridgeMessage = WebBridgeMessage | {type: 'retired'; id?: string};
+
+export function parseWebBridgeMessage(value: unknown): ParsedWebBridgeMessage | null {
   const item = object(value);
-  if (!item || item.version !== 1 || !isMessageType(item.type)) return null;
+  if (!item || item.version !== 1) return null;
   const id = optionalString(item.id, LIMITS.id, true);
   if (id === null) return null;
+  // Keep only the correlation ID for legacy notification requests.
+  if (item.type === 'identifyNotificationUser' || item.type === 'clearNotificationUser') {
+    return {type: 'retired', id};
+  }
+  if (!isMessageType(item.type)) return null;
   const base = {version: 1 as const, ...(id ? {id} : {})};
   const contact = (fieldValue: unknown) => optionalString(fieldValue, LIMITS.contact, true);
   const short = (fieldValue: unknown) => optionalString(fieldValue, LIMITS.short);
@@ -55,15 +62,10 @@ export function parseWebBridgeMessage(value: unknown): WebBridgeMessage | null {
       return {...base, type: 'share', ...(title ? {title} : {}), ...(message ? {message} : {}), ...(url ? {url} : {})};
     }
     case 'openNative': return isNativeDestination(item.destination) ? {...base, type: 'openNative', destination: item.destination} : null;
-    case 'identifyNotificationUser': {
-      const externalId = optionalString(item.externalId, LIMITS.externalId, true);
-      return externalId && !externalId.includes('@') ? {...base, type: 'identifyNotificationUser', externalId} : null;
-    }
-    case 'clearNotificationUser': return {...base, type: 'clearNotificationUser'};
   }
 }
 
-export function parseWebBridgeEventData(data: string, maxLength = 8192): WebBridgeMessage | null {
+export function parseWebBridgeEventData(data: string, maxLength = 8192): ParsedWebBridgeMessage | null {
   if (!data.trim() || data.length > maxLength) return null;
   try { return parseWebBridgeMessage(JSON.parse(data)); } catch { return null; }
 }

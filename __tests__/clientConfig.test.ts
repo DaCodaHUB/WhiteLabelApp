@@ -30,13 +30,6 @@ describe('validateClientConfig', () => {
     expect(() => validateClientConfig(config)).toThrow('branding.primaryColor');
   });
 
-  test('requires a OneSignal App ID when notifications are enabled', () => {
-    const config = createConfig({
-      features: {...defaultConfig.features, notifications: true},
-    });
-    expect(() => validateClientConfig(config)).toThrow('notifications.oneSignalAppId');
-  });
-
   test('rejects an enabled website bridge without WebContent', () => {
     const config = createConfig({
       home: {actions: []},
@@ -44,11 +37,6 @@ describe('validateClientConfig', () => {
       webBridge: {enabled: true, allowedMessageTypes: ['openExternal'], maxMessageLength: 8192},
     });
     expect(() => validateClientConfig(config)).toThrow('webBridge.enabled requires features.webContent');
-  });
-
-  test('requires custom notification prompt copy when enabled', () => {
-    const config = createConfig({notifications: {...defaultConfig.notifications, permissionPrompt: {...defaultConfig.notifications.permissionPrompt, title: ''}}});
-    expect(() => validateClientConfig(config)).toThrow('notifications.permissionPrompt.title');
   });
 
   test.each([

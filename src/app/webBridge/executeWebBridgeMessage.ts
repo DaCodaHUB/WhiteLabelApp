@@ -7,7 +7,6 @@ const safeMessages: Record<string, string> = {
   LINK_UNAVAILABLE: 'The requested link is unavailable.',
   INVALID_DESTINATION: 'The requested destination is unavailable.',
   FEATURE_DISABLED: 'This feature is unavailable.',
-  NOTIFICATIONS_UNAVAILABLE: 'Notifications are unavailable.',
   SHARE_UNAVAILABLE: 'Sharing is unavailable.',
   EXECUTION_FAILED: 'The requested action could not be completed.',
 };
@@ -48,18 +47,13 @@ export async function executeWebBridgeMessage(message: WebBridgeMessage, depende
       case 'openNative':
         if (!features[requiredFeatureForDestination(message.destination)]) return result(message, 'unsupported', 'INVALID_DESTINATION');
         return executeHomeEquivalent({id: 'bridge', title: 'Native screen', icon: 'settings', type: 'nativeScreen', screen: message.destination}, message, dependencies);
-      case 'share':
+      case 'share': {
         if (!features.sharing) return result(message, 'unsupported', 'FEATURE_DISABLED');
-        await dependencies.sharing.share(message);
-        return {status: 'success', requestId: message.id};
-      case 'identifyNotificationUser':
-        if (!features.notifications || !dependencies.notifications.enabled || !dependencies.notifications.initialized) return result(message, 'unsupported', 'NOTIFICATIONS_UNAVAILABLE');
-        dependencies.notifications.identify(message.externalId);
-        return {status: 'success', requestId: message.id};
-      case 'clearNotificationUser':
-        if (!features.notifications || !dependencies.notifications.enabled || !dependencies.notifications.initialized) return result(message, 'unsupported', 'NOTIFICATIONS_UNAVAILABLE');
-        dependencies.notifications.clear();
-        return {status: 'success', requestId: message.id};
+        const {status} = await dependencies.sharing.share(message);
+        return status === 'cancelled'
+          ? {status: 'cancelled', requestId: message.id, message: 'Sharing cancelled.'}
+          : {status: 'success', requestId: message.id, message: 'Share sheet opened.'};
+      }
     }
   } catch {
     return result(message, 'failed', message.type === 'share' ? 'SHARE_UNAVAILABLE' : 'EXECUTION_FAILED');

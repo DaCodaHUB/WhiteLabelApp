@@ -6,9 +6,10 @@ import {AppButton, AppCard, AppIcon, AppScreen, AppText} from '../components';
 import {useAppTheme} from '../theme';
 import {useHomeActionExecutor} from '../hooks/useHomeActionExecutor';
 import {isTestLabAvailable} from '../navigation/developmentGate';
-import {rootNavigationRef} from '../navigation/notificationNavigation';
+import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+import type {RootStackParamList} from '../navigation/types';
 
-export function HomeScreen() {
+export function HomeScreen({navigation}: {navigation: Pick<NativeStackScreenProps<RootStackParamList, 'Home'>['navigation'], 'navigate'>}) {
   const config = useClientConfig();
   const theme = useAppTheme();
   const actions = config.home.actions.filter(action => isHomeActionAvailable(action, config));
@@ -31,7 +32,7 @@ export function HomeScreen() {
           </AppCard>
         ))}
       </View>
-      {isTestLabAvailable(__DEV__) && <View style={{paddingVertical: theme.spacing.lg}}><AppButton title="Open Test Lab" variant="outline" onPress={() => rootNavigationRef.navigate('TestLab')} /></View>}
+      {isTestLabAvailable(__DEV__) && <View style={{paddingVertical: theme.spacing.lg}}><AppButton title="Open Test Lab" variant="outline" onPress={() => navigation.navigate('TestLab')} /></View>}
     </AppScreen>
   );
 }

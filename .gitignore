@@ -103,3 +103,10 @@ clients/**/*.cer
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Version Markdown documentation and keep local diagnostic evidence out of Git.
+/docs/**
+!/docs/**/
+!/docs/**/*.md
+/artifacts/
+docs/

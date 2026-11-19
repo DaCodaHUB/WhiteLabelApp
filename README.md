@@ -1,38 +1,40 @@
 # White Label App
 
-A React Native + TypeScript foundation for producing configurable small-business apps. It intentionally contains no business logic.
+A React Native and TypeScript portfolio showcase. Demo and Sample Cafe share one app shell, with distinct branding and native identifiers. Demo uses a secure WebView bridge to open the Android share sheet.
+
+See the [portfolio scope and validation report](docs/portfolio-scope-reduction.md) for the current device and build results.
 
 ## Architecture
 
-The source follows Clean Architecture dependency direction:
+The shared app is organized by responsibility.
 
-- `src/domain`: framework contracts with no React Native dependencies.
-- `src/data`: contract implementations such as MMKV storage.
-- `src/infrastructure`: external SDK adapters such as OneSignal.
+- `src/infrastructure`: platform adapters for linking and sharing.
 - `src/app`: composition root, providers, validation, and client configuration.
 - `src/presentation`: navigation, screens, components, and theme exports.
 - `clients/<client-id>/assets`: client-owned source artwork; preparation generates runtime and native copies.
-- `src/shared`: cross-cutting constants and utilities.
 
 ## Client packaging
 
+From a fresh checkout, use the Node version in `.nvmrc` and prepare Demo before running the development checks. Preparation supplies the generated module imported by the app and its startup test.
+
+```sh
+npm ci
+npm run client:prepare -- demo development
+npm run lint
+npm run typecheck
+npm test -- --runInBand
+```
+
 Clients are isolated under `clients/<client-id>/`; no global search-and-replace is used. Each directory contains `client.config.ts` (runtime features and branding), `client.native.json` (build identifiers), `environment.development.ts` and `environment.production.ts` (public environment values), plus `assets/README.md`. `src/generated/activeClient.ts` imports exactly one client and one environment, so Metro need not discover every client. Generated files are ignored and must be recreated locally.
 
-Development defaults to the fictional `demo` client. `clients/sample-cafe` is a second development example with different actions, branding, and artwork; its example website and placeholder details must be replaced before real use. Production requires an explicit `--client` or `APP_CLIENT`, rejects `demo`, and requires all production source assets. Selection occurs before Metro/native compilation and is not mutable from JavaScript at runtime. `APP_ENVIRONMENT` may be `development` or `production`; unknown values fail.
+Development defaults to the fictional `demo` client. `clients/sample-cafe` is a second development example with different actions, branding, and artwork; it uses fictional business details. Production requires an explicit `--client` or `APP_CLIENT`, rejects `demo`, and requires all production source assets. Selection occurs before Metro/native compilation and is not mutable from JavaScript at runtime. `APP_ENVIRONMENT` may be `development` or `production`; unknown values fail.
 
-Create, validate, prepare, and run a client from PowerShell:
+Validate, prepare, and run a portfolio client from PowerShell.
 
 ```powershell
-npm run client:create -- `
-  --id sample-business `
-  --display-name "Sample Business" `
-  --android-id com.example.samplebusiness `
-  --ios-id com.example.samplebusiness
-
-npm run client:validate -- --client sample-business
-npm run client:prepare -- --client sample-business --environment development
-npm run android -- --client sample-business
-npm start -- --client sample-business --reset-cache
+npm run client:validate -- sample-cafe development
+npm run client:prepare -- sample-cafe development
+node scripts/clientRun.js android --client sample-cafe --environment development
 ```
 
 Client and environment selection use `--client <id>` and `--environment <development|production>`. Explicit CLI values take precedence over `APP_CLIENT` and `APP_ENVIRONMENT`; development defaults to Demo when no client is selected. `client:prepare` and `client:validate` also accept positional `<id> <environment>` arguments for compatibility with npm versions that pass those values without their flag names. Missing, conflicting, or unknown selection values fail before preparation. React Native options such as `--deviceId` and `--reset-cache` pass through the runner.
@@ -45,21 +47,19 @@ Preparation also emits the ignored `ios/client.generated.xcconfig` with the bund
 
 Production artwork source files under `clients/<id>/assets/` are `app-icon.png` (exactly 1024×1024 opaque PNG), `splash-logo.png` (at least 1200×1200 transparent PNG), and `brand-logo.png` (at least 512 px wide with transparency). Preparation validates them, resizes Android launcher and splash resources and iOS icon and launch resources, and copies the runtime logo to a fixed generated path used by Metro. No shared asset registry needs editing for a new client. Development generates generic placeholders when all three source files are absent; a partial set is an error. Generated artwork paths are ignored by Git and replaced on every client switch.
 
-Never put credentials in TypeScript, JSON metadata, environment modules, or generated output. Client credential directories, Firebase files, keystores, signing properties, APNs keys/certificates, provisioning profiles, and common private-key formats are ignored. OneSignal REST keys belong only in protected backend infrastructure. Example/readme files remain trackable; real credential filenames are never created by these tools.
+Never put credentials in TypeScript, JSON metadata, environment modules, or generated output. Client credential directories, Firebase files, keystores, signing properties, APNs keys/certificates, provisioning profiles, and common private-key formats are ignored. Example/readme files remain trackable; real credential filenames are never created by these tools.
 
 If Metro or a native build shows stale branding, stop Metro, rerun `client:prepare`, confirm the generated paths printed by the command, clean the relevant native build cache, and restart. A failed preparation validates before writing and removes staged temporary files, leaving the last complete generated set intact.
 
-The client ID, storage namespace, Android application ID, iOS bundle ID, display name, signing identities, app icons, service files, and store records must be unique per published app. Native identifiers are intentionally separate from runtime TypeScript configuration.
+Client IDs and app identifiers distinguish the two builds. Native identifiers are separate from runtime configuration.
 
-Feature flags are static client configuration, not mutable user state. `webContent` controls the WebContent screen, Home web actions, website bridge, and notification web destinations. `settings` controls the Settings screen and Home, bridge, and notification navigation to it. `contact` controls phone/email Home and bridge actions; `location` controls map actions; `sharing` controls bridge sharing. `notifications` controls OneSignal initialization, notification routing, and bridge identity actions. The Settings permission controls appear only while notifications are enabled. Enabled Home actions requiring a disabled feature fail client validation; runtime also hides and rejects them. Appointment, authentication, ecommerce, loyalty, analytics, and logging capabilities are not implemented and have no configuration flags.
-
-OneSignal initializes only when notifications are enabled and an App ID is present. App IDs and platform capability setup belong to each client; APNs credentials, Firebase credentials, signing material, and OneSignal REST API keys must never be committed to or embedded in the mobile application.
+Client configuration gates WebContent, Settings, contact, maps, and sharing. Enabled Home actions requiring a disabled feature fail validation. At runtime, the same flags gate navigation and native actions.
 
 ## Design system
 
 The reusable UI layer lives in `src/presentation/components` and `src/presentation/theme`. `ThemeProvider` is nested inside `ClientConfigProvider`, derives brand colors from the active configuration, and supplies semantic colors plus shared spacing, typography, radius, and restrained shadow tokens through `useAppTheme()`. Components must not import `defaultConfig` or hardcode an active client's branding.
 
-Shared components currently include `AppScreen`, `AppText`, `AppButton`, `AppCard`, `AppIcon`, `LoadingState`, `ErrorState`, and `EmptyState`. `AppIcon` is the sole presentation-level wrapper around Material Icons. Decorative icons are hidden from assistive technology; any icon-only control added later must have an explicit accessibility label and an approximately 44-point touch target.
+Shared components currently include `AppScreen`, `AppText`, `AppButton`, `AppCard`, `AppIcon`, `LoadingState` and `ErrorState`. `AppIcon` is the sole presentation-level wrapper around Material Icons. Decorative icons are hidden from assistive technology; any icon-only control added later must have an explicit accessibility label and an approximately 44-point touch target.
 
 ## Home actions
 
@@ -120,51 +120,12 @@ HTTPS download callbacks are handed to an external application on iOS when suppo
 
 Before release, test the exact production domains, intended subdomains, login/session renewal, external links, offline recovery, renderer recovery, hardware back, downloads, uploads, and target-blank behavior on physical Android and iOS devices.
 
-## Notifications
-
-The notification subsystem is split across `src/domain/services/NotificationService.ts`, the OneSignal adapter in `src/infrastructure/notifications`, application payload parsing/routing in `src/app/notifications`, provider lifecycle state, and the typed global navigation adapter in presentation. When the notification feature is disabled or no App ID is configured, OneSignal is not initialized and no listeners or permission requests are created.
-
-Initialization registers only click and permission-change listeners. Foreground receipt alone never navigates and no in-app banner is shown. Permission is requested only after an explicit press: Settings first presents the client-configured explanation, then the operating-system prompt after Allow. Allow and Not Now both record the explanation decision in namespaced MMKV so it is not repeatedly presented. A denied user can open application settings later.
-
-The installed OneSignal 5.5 adapter uses `OneSignal.initialize`, `Notifications.permissionNative`, `getPermissionAsync`, `canRequestPermission`, `requestPermission(false)`, notification `click` and `permissionChange` listeners, and `OneSignal.login/logout`. Authentication—not the notification layer—must provide a stable, non-email external ID. IDs are trimmed and limited to 128 characters; logout clears the OneSignal user context.
-
-Notification additional data uses a versioned schema. Unknown versions, malformed objects, arrays, unsupported destinations, HTTP URLs, full URLs supplied as client routes, and oversized values are ignored. Extra fields on an otherwise valid payload are ignored for forward-compatible campaign metadata.
-
-```json
-{"version":1,"type":"openWeb","route":"/specials","title":"Current Specials"}
-```
-
-```json
-{"version":1,"type":"openNative","destination":"settings"}
-```
-
-```json
-{"version":1,"type":"openExternal","url":"https://example.org/details"}
-```
-
-```json
-{"version":1,"type":"home"}
-```
-
-`openWeb` uses the same secure client URL builder and hostname allow-list as Home actions, then opens the internal WebView. `openExternal` accepts HTTPS only and checks the platform linking adapter. Native destinations are a closed union mapped to real screens. If a click arrives before React Navigation is ready, one validated payload is retained in memory and processed once on navigation readiness; it is never written to disk. Duplicate click IDs and concurrent routing are suppressed.
-
-Never place a OneSignal REST API key in the mobile app. REST keys authorize server operations and belong only in protected backend infrastructure. Runtime App IDs and platform push configuration remain client-specific.
-
-### Remaining native notification setup
-
-For Android, assign a unique application ID, create the client Firebase project and uncommitted production configuration workflow, configure OneSignal Android, select notification icons/channels, and test delivery and clicks on a physical device.
-
-For iOS, assign a unique bundle ID, enable Push Notifications and any required remote-notification Background Mode, add a Notification Service Extension only for selected OneSignal features, configure an APNs key or certificate in protected systems, configure the OneSignal iOS app, install pods, and test on a physical device.
-
-After credentials are configured outside this template, test first-launch permission states, denial and system-settings recovery, foreground receipt without navigation, background and terminated-state clicks, every payload type, invalid payload rejection, user login/logout, and unsubscribe/reinstall behavior.
-
 ## Native configuration
 
 1. Use Node 22.13+ (the version is captured in `.nvmrc`).
-2. Run `npm install`.
+2. Run `npm ci`.
 3. On macOS, run `bundle install && bundle exec pod install` from `ios`.
-4. Complete the platform credentials/capabilities required by OneSignal only when enabling client push notifications.
-5. Use the client packaging workflow above for identifiers and branding; configure signing and service credentials only through protected local/CI mechanisms.
+4. Use the client packaging workflow above to select identifiers and branding.
 
 ## Commands
 
@@ -180,6 +141,8 @@ Configuration and URL utility tests are in `__tests__/clientConfig.test.ts` and 
 
 ## Website bridge
 
+For the portfolio walkthrough, open **View Portfolio → Native Bridge** in Demo. The [native share showcase](docs/portfolio-showcase.md) documents the Android capture and the hosted bridge script change needed for the page's share button.
+
 The optional website bridge is a narrow application-layer gateway from an authorized client page to approved native services. It is disabled by default. Enabling it requires both an explicit allow-list of message types and a bounded message length:
 
 ```ts
@@ -190,7 +153,7 @@ webBridge: {
 }
 ```
 
-Version 1 supports `openPhone`, `openEmail`, `openMap`, `openExternal`, `share`, `openNative`, `identifyNotificationUser`, and `clearNotificationUser`. Each type must also pass its relevant feature flag. Native destinations use the typed destination mapping and cannot contain arbitrary React Navigation route names. External and map URLs require HTTPS.
+Version 1 supports `openPhone`, `openEmail`, `openMap`, `openExternal`, `share`, and `openNative`. Each type must also pass its relevant feature flag. Native destinations use the typed destination mapping and cannot contain arbitrary React Navigation route names. External and map URLs require HTTPS.
 
 Messages are processed only while the current main-frame page is HTTPS and belongs to `website.allowedDomains`. A native-generated, per-WebView capability is installed only in the main frame through `window.WhiteLabelBridge`; raw `window.ReactNativeWebView.postMessage` calls, including calls from embedded frames, cannot invoke privileged actions. The reported message URL is checked as an additional restriction, but is not treated as proof of frame identity because Android WebView implementations differ. `about:blank`, malformed URLs, external pages, disabled bridges, and unlisted types are rejected. Unknown JSON fields are tolerated for forward-compatible website clients, but every recognized field is type-checked and length-bounded. Raw messages and native errors are neither persisted nor returned. A business must trust scripts running in its own top-level page; the bridge cannot distinguish a compromised same-origin script from the business's script.
 
@@ -205,7 +168,6 @@ function sendAppMessage(message) {
 
 sendAppMessage({id: 'request-123', type: 'openPhone'});
 sendAppMessage({id: 'request-124', type: 'openNative', destination: 'settings'});
-sendAppMessage({id: 'request-125', type: 'identifyNotificationUser', externalId: 'customer_12345'});
 ```
 
 When a request supplies an ID, the app dispatches a narrowly scoped response event:
@@ -218,7 +180,7 @@ window.addEventListener('freelanceAppBridgeResponse', event => {
 
 Responses are JSON-serialized with executable-context escaping and never include configuration, personal data, credentials, or raw errors. IDs are deduplicated briefly in memory; messages without IDs execute without strong deduplication and receive no response.
 
-Notification identity calls only connect an application user identifier to the already-initialized notification SDK. They require notifications to be enabled, reject email-shaped identifiers, and are not proof of authentication. The website must send a stable, non-secret ID only after its own successful authentication.
+Retired notification identity requests receive `MESSAGE_NOT_ALLOWED` with the validated request ID when sent through the authorized bridge. No identity data is used.
 
 The bridge does not expose evaluation, storage, files, device identifiers, clipboard, contacts, cameras, unrestricted navigation, or arbitrary native functions. The main-frame wrapper uses `react-native-webview`'s transport and requires the `react-native-get-random-values` native module for a secure capability; install native dependencies before building. Existing websites calling `window.ReactNativeWebView.postMessage` directly must switch to `window.WhiteLabelBridge.postMessage` for privileged messages.
 
@@ -226,11 +188,11 @@ To add a future message type, extend the config union and parser, add an injecte
 
 ## Development demo and Test Lab
 
-Development defaults to the packaged `clients/demo` definition, whose website home route is `https://dacodahub.github.io/mobile-demo/`. `client:prepare` generates the active client module, and `App.tsx` supplies that configuration to Test Lab through the same provider used by the rest of the app. Demo has fictional 555 contact data, an isolated storage namespace, and no push credentials. There is no separate development demo configuration. Release builds use an explicit non-demo client and its production environment.
+Development defaults to the packaged `clients/demo` definition, whose website home route is `https://dacodahub.github.io/mobile-demo/`. `client:prepare` generates the active client module, and `App.tsx` supplies that configuration to Test Lab through the same provider used by the rest of the app. Demo has fictional 555 contact data. There is no separate development demo configuration. Release builds use an explicit non-demo client and its production environment.
 
 When Metro runs with `__DEV__ === true`, the Home screen shows **Open Test Lab** and the navigator registers the typed `TestLab` route. The screen and route are guarded by the compile-time development constant; no Test Lab entry point is rendered in release builds.
 
-The Test Lab reports the active client ID, WebView hostname, notification enabled and permission states, and bridge state. Its buttons exercise internal and external URL policy, Home actions, Settings navigation, and notification payload routing. These controls delegate to the same executors, routers, linking abstraction, and navigation adapters used by the application—they do not contain alternate implementations of those behaviors.
+Test Lab shows the active client, WebView host, and bridge state. Its three actions open the configured site, check that HTTP is blocked, and exercise the maps handoff.
 
 To use it:
 
@@ -238,6 +200,6 @@ To use it:
 2. Open **Open Test Lab** from Home.
 3. Run an action and inspect its safe status under **Last result**.
 
-Some actions launch native applications, so results vary with emulator capabilities. With demo selected, notifications remain disabled because it has no OneSignal App ID. The notification routing buttons then report `notifications-disabled` for valid destinations; malformed payloads still report `invalid-payload`. They do not request permission or contact OneSignal.
+The maps handoff depends on which apps are installed on the device.
 
-Run the focused development-environment tests with `npm test -- testLab`. They verify the build guard, production-service delegation, malformed-payload rejection, and fictional-data constraints.
+Run the focused development-environment tests with `npm test -- testLab`. They verify the build guard, action delegation, insecure URL rejection, and fictional-data constraints.

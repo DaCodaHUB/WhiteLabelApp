@@ -16,7 +16,6 @@ export type ClientEnvironmentConfig = {
 };
 export type ResolveClientSelectionOptions = {environment: ClientEnvironment; clientId?: string; cwd?: string; env?: NodeJS.ProcessEnv};
 export type ParsedClientArguments = {clientId?: string; environment?: ClientEnvironment; forwardedArgs: string[]};
-export type CreateClientDefinitionOptions = {workspaceRoot: string; clientId: string; displayName: string; androidApplicationId: string; iosBundleIdentifier: string};
 export type ValidateClientProjectOptions = {workspaceRoot: string; clientId: string; environment: ClientEnvironment};
 
 const CLIENT_ID = /^[a-z][a-z0-9-]{1,39}$/;
@@ -123,30 +122,6 @@ export function resolveClientSelection(options: ResolveClientSelectionOptions): 
   }
   return {clientId, environment: options.environment};
 }
-
-function quoteTs(value: string): string { return JSON.stringify(value); }
-function environmentTemplate(baseUrl: string): string {
-  const hostname = new URL(baseUrl).hostname;
-  return `import type {ClientEnvironmentConfig} from '../../scripts/clientPackaging';\n\nexport const environmentConfig = {\n  website: {baseUrl: ${quoteTs(baseUrl)}, allowedDomains: [${quoteTs(hostname)}]},\n} satisfies ClientEnvironmentConfig;\n`;
-}
-export function createClientDefinition(options: CreateClientDefinitionOptions): {created: string[]; files: string[]} {
-  const native = parseClientNativeConfig({clientId: options.clientId, displayName: options.displayName, android: {applicationId: options.androidApplicationId, namespace: 'com.whitelabelapp', deepLinkScheme: options.clientId.replace(/-/g, '')}, ios: {bundleIdentifier: options.iosBundleIdentifier, deepLinkScheme: options.clientId.replace(/-/g, '')}});
-  const clientDir = path.join(path.resolve(options.workspaceRoot), 'clients', options.clientId);
-  if (fs.existsSync(clientDir)) return {created: [], files: []};
-  const runtime = `import {defaultConfig} from '../../src/app/config/defaultConfig';\nimport type {ClientConfig} from '../../src/app/config/types';\n\nexport const clientConfig = {\n  ...defaultConfig,\n  clientId: ${quoteTs(options.clientId)},\n  appName: ${quoteTs(options.displayName)},\n  home: {...defaultConfig.home, title: ${quoteTs(options.displayName)}},\n  storage: {namespace: ${quoteTs(options.clientId)}},\n} satisfies ClientConfig;\n`;
-  const files = new Map<string, string>([
-    ['client.config.ts', runtime], ['client.native.json', JSON.stringify(native, null, 2) + '\n'],
-    ['environment.development.ts', environmentTemplate('https://example.com')], ['environment.production.ts', environmentTemplate('https://example.com')],
-    ['assets/README.md', assetReadme(options.clientId)],
-  ]);
-  const staging = `${clientDir}.creating-${process.pid}`;
-  try {
-    for (const [relative, content] of files) { const target = path.join(staging, relative); fs.mkdirSync(path.dirname(target), {recursive: true}); fs.writeFileSync(target, content, {flag: 'wx'}); }
-    fs.renameSync(staging, clientDir);
-  } catch (error) { fs.rmSync(staging, {recursive: true, force: true}); throw error; }
-  return {created: [...files.keys()], files: [...files.keys()].map(item => path.join(clientDir, item))};
-}
-function assetReadme(clientId: string): string { return `# ${clientId} assets\n\nPut these PNG source files in this directory. Run \`npm run client:prepare -- --client ${clientId} --environment development\` to generate Android, iOS, and runtime artwork; do not edit generated resources.\n\n- \`app-icon.png\`: exactly 1024 x 1024 pixels, fully opaque, no rounded corners.\n- \`splash-logo.png\`: at least 1200 x 1200 pixels with transparency.\n- \`brand-logo.png\`: at least 512 pixels wide with transparency.\n\nProduction requires all three valid images. Development uses a generic generated placeholder only when all three files are absent; a partial set is an error. Preparation resizes and converts the outputs to sRGB.\n`; }
 
 function loadRuntimeConfig(workspaceRoot: string, clientId: string): ClientConfig {
   const modulePath = path.join(workspaceRoot, 'clients', clientId, 'client.config.ts');

@@ -7,9 +7,8 @@ function config(overrides: Partial<ClientConfig> = {}): ClientConfig {
   return {
     ...defaultConfig,
     contact: {phone: '+15550100', email: 'hello@example.com', address: '1 Main St', mapUrl: 'https://maps.example.com/client'},
-    features: {...defaultConfig.features, contact: true, location: true, sharing: true, notifications: true},
-    notifications: {...defaultConfig.notifications, oneSignalAppId: '00000000-0000-0000-0000-000000000000'},
-    webBridge: {enabled: true, allowedMessageTypes: ['openPhone', 'openEmail', 'openMap', 'openExternal', 'share', 'openNative', 'identifyNotificationUser', 'clearNotificationUser'], maxMessageLength: 8192},
+    features: {...defaultConfig.features, contact: true, location: true, sharing: true},
+    webBridge: {enabled: true, allowedMessageTypes: ['openPhone', 'openEmail', 'openMap', 'openExternal', 'share', 'openNative'], maxMessageLength: 8192},
     ...overrides,
   };
 }
@@ -20,7 +19,6 @@ function dependencies(clientConfig = config()): WebBridgeDependencies {
     linking: {canOpenUrl: jest.fn(async () => true), openUrl: jest.fn(async () => undefined)},
     navigation: {openNative: jest.fn()},
     sharing: {share: jest.fn(async (): Promise<ShareResult> => ({status: 'shared'}))},
-    notifications: {enabled: true, initialized: true, identify: jest.fn(), clear: jest.fn()},
   };
 }
 
@@ -60,14 +58,11 @@ describe('web bridge executor', () => {
     const deps = dependencies(); await executeWebBridgeMessage({version: 1, type: 'openExternal', url: 'https://outside.test'}, deps);
     expect(deps.linking.openUrl).toHaveBeenCalledWith('https://outside.test/');
   });
-  test('native, share, and notification identity delegate', async () => {
+  test('native navigation and share delegate', async () => {
     const deps = dependencies();
     await executeWebBridgeMessage({version: 1, type: 'openNative', destination: 'settings'}, deps);
     await executeWebBridgeMessage({version: 1, type: 'share', message: 'hello'}, deps);
-    await executeWebBridgeMessage({version: 1, type: 'identifyNotificationUser', externalId: 'customer_1'}, deps);
-    await executeWebBridgeMessage({version: 1, type: 'clearNotificationUser'}, deps);
     expect(deps.navigation.openNative).toHaveBeenCalledWith('settings'); expect(deps.sharing.share).toHaveBeenCalled();
-    expect(deps.notifications.identify).toHaveBeenCalledWith('customer_1'); expect(deps.notifications.clear).toHaveBeenCalled();
   });
   test('unavailable target is unsupported and native errors are sanitized', async () => {
     const unavailable = dependencies(); jest.mocked(unavailable.linking.canOpenUrl).mockResolvedValue(false);
@@ -90,4 +85,19 @@ describe('web bridge executor', () => {
     expect(await createWebBridgeHandler(deps)(JSON.stringify({version: 1, type: 'openExternal', url: 'https://outside.test'}), 'https://example.com')).toMatchObject({code: 'FEATURE_DISABLED'});
     expect(deps.linking.openUrl).not.toHaveBeenCalled();
   });
+});
+
+test.each(['identifyNotificationUser', 'clearNotificationUser'])('rejects retired %s without a native effect', async type => {
+  const deps = dependencies();
+  const reply = await createWebBridgeHandler(deps)(
+    JSON.stringify({version: 1, id: 'retired-1', type, externalId: 'private-id'}),
+    'https://example.com',
+  );
+  expect(reply).toEqual({
+    status: 'unsupported', code: 'MESSAGE_NOT_ALLOWED', message: 'This message type is not allowed.', requestId: 'retired-1',
+  });
+  expect(deps.linking.canOpenUrl).not.toHaveBeenCalled();
+  expect(deps.linking.openUrl).not.toHaveBeenCalled();
+  expect(deps.navigation.openNative).not.toHaveBeenCalled();
+  expect(deps.sharing.share).not.toHaveBeenCalled();
 });

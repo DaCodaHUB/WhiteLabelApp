@@ -1,4 +1,4 @@
-import {Share} from 'react-native';
+import {Platform, Share} from 'react-native';
 import type {ShareService} from '../../app/webBridge';
 
 export const reactNativeShareService: ShareService = {
@@ -13,7 +13,11 @@ export const reactNativeShareService: ShareService = {
       try { if (new URL(url).protocol !== 'https:') throw new Error('Invalid share URL.'); }
       catch { throw new Error('Invalid share URL.'); }
     }
-    const result = await Share.share({title, message: message ?? url ?? '', url});
+    // Android's Share API only forwards title and message to the chooser.
+    const content = Platform.OS === 'android'
+      ? {title, message: [message, url].filter(Boolean).join('\n')}
+      : {title, message: message ?? url ?? '', url};
+    const result = await Share.share(content);
     return {status: result.action === Share.dismissedAction ? 'cancelled' : 'shared'};
   },
 };

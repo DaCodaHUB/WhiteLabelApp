@@ -2,11 +2,6 @@ import type {ImageSourcePropType} from 'react-native';
 
 export type WebsiteRoutes = {
   home: string;
-  services?: string;
-  booking?: string;
-  shop?: string;
-  account?: string;
-  specials?: string;
 };
 
 export type BrandingConfig = {
@@ -33,23 +28,12 @@ export type NativeDestination = 'settings';
 
 export type WebBridgeMessageType =
   | 'openPhone' | 'openEmail' | 'openMap' | 'openExternal' | 'share'
-  | 'openNative' | 'identifyNotificationUser' | 'clearNotificationUser';
+  | 'openNative';
 
 export type WebBridgeConfig = {
   enabled: boolean;
   allowedMessageTypes: WebBridgeMessageType[];
   maxMessageLength: number;
-};
-
-export type NotificationConfig = {
-  oneSignalAppId?: string;
-  permissionPrompt: {
-    enabled: boolean;
-    title: string;
-    message: string;
-    allowLabel: string;
-    laterLabel: string;
-  };
 };
 
 type HomeActionBase = {
@@ -88,14 +72,9 @@ export type ClientConfig = {
     address?: string;
     mapUrl?: string;
   };
-  notifications: NotificationConfig;
   webBridge?: WebBridgeConfig;
-  storage: {
-    namespace: string;
-  };
   features: {
     webContent: boolean;
-    notifications: boolean;
     contact: boolean;
     location: boolean;
     sharing: boolean;

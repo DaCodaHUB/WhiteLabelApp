@@ -8,7 +8,6 @@ function dependencies(): TestLabDependencies {
     config: demoClientConfig,
     linking: {canOpenUrl: jest.fn(async () => true), openUrl: jest.fn(async () => undefined)},
     homeNavigation: {openWebContent: jest.fn(), openNativeScreen: jest.fn()},
-    notificationNavigation: {isReady: jest.fn(() => true), openHome: jest.fn(), openWebContent: jest.fn(), openNative: jest.fn()},
   };
 }
 
@@ -17,28 +16,14 @@ test('Test Lab availability follows the development build guard', () => {
   expect(isTestLabAvailable(false)).toBe(false);
 });
 
-test('actions delegate to existing home and notification navigation services', async () => {
+test('delegates the configured site and maps actions and blocks insecure URLs', async () => {
   const deps = dependencies();
-  deps.config = {...demoClientConfig, features: {...demoClientConfig.features, notifications: true}};
-  await executeTestLabAction('allowedRoute', deps);
-  await executeTestLabAction('phone', deps);
-  await executeTestLabAction('settings', deps);
-  await executeTestLabAction('notificationWeb', deps);
-  await executeTestLabAction('notificationNative', deps);
-  await executeTestLabAction('notificationHome', deps);
-
-  expect(deps.homeNavigation.openWebContent).toHaveBeenCalledWith('https://dacodahub.github.io/', 'Allowed client route');
-  expect(deps.linking.openUrl).toHaveBeenCalledWith('tel:+12025550199');
-  expect(deps.homeNavigation.openNativeScreen).toHaveBeenCalledWith('settings');
-  expect(deps.notificationNavigation.openWebContent).toHaveBeenCalledWith('https://dacodahub.github.io/', 'Example services');
-  expect(deps.notificationNavigation.openNative).toHaveBeenCalledWith('settings');
-  expect(deps.notificationNavigation.openHome).toHaveBeenCalled();
-});
-
-test('demo Test Lab notification buttons cannot route while notifications are disabled', async () => {
-  const deps = dependencies();
-  expect(await executeTestLabAction('notificationWeb', deps)).toMatchObject({status: 'ignored', detail: 'notifications-disabled'});
-  expect(deps.notificationNavigation.openWebContent).not.toHaveBeenCalled();
+  await executeTestLabAction('internalWebView', deps);
+  await executeTestLabAction('maps', deps);
+  expect(deps.homeNavigation.openWebContent).toHaveBeenCalledWith('https://dacodahub.github.io/mobile-demo/', 'Internal WebView');
+  expect(deps.linking.openUrl).toHaveBeenCalledWith(demoClientConfig.contact.mapUrl);
+  expect(await executeTestLabAction('blockedHttp', deps)).toEqual({status: 'rejected', detail: 'block'});
+  expect(deps.linking.openUrl).toHaveBeenCalledTimes(1);
 });
 
 test('Test Lab internal web action also respects the WebContent flag', async () => {
@@ -48,14 +33,6 @@ test('Test Lab internal web action also respects the WebContent flag', async () 
   expect(deps.homeNavigation.openWebContent).not.toHaveBeenCalled();
 });
 
-test('malformed notification payload does not navigate', async () => {
-  const deps = dependencies();
-  expect(await executeTestLabAction('notificationMalformed', deps)).toMatchObject({status: 'ignored', detail: 'invalid-payload'});
-  expect(deps.notificationNavigation.openHome).not.toHaveBeenCalled();
-  expect(deps.notificationNavigation.openWebContent).not.toHaveBeenCalled();
-  expect(deps.notificationNavigation.openNative).not.toHaveBeenCalled();
-});
-
 test('packaged demo configuration contains fictional contact data and no credentials', () => {
   expect(demoClientConfig.website.baseUrl).toBe('https://dacodahub.github.io');
   expect(demoClientConfig.website.allowedDomains).toEqual(['dacodahub.github.io']);
@@ -63,6 +40,5 @@ test('packaged demo configuration contains fictional contact data and no credent
   expect(demoClientConfig.contact.email?.endsWith('@dacodahub.github.io')).toBe(true);
   expect(demoClientConfig.contact.phone).toContain('555');
   expect(demoClientConfig.contact.address).toContain('Example');
-  expect('oneSignalAppId' in demoClientConfig.notifications).toBe(false);
   expect(JSON.stringify(demoClientConfig)).not.toMatch(/api[_-]?key|secret|credential/i);
 });

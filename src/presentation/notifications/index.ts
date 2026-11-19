@@ -1,1 +1,0 @@
-export {NotificationPermissionCard} from './NotificationPermissionCard';

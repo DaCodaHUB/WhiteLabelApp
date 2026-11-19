@@ -30,24 +30,13 @@ export const clientConfig: ClientConfig = {
     address: '100 Example Avenue, Sample City',
     mapUrl: 'https://www.google.com/maps/search/DaCodaHub',
   },
-  notifications: {
-    permissionPrompt: {
-      enabled: false,
-      title: 'Stay informed',
-      message: 'Enable notifications to receive useful updates from this app.',
-      allowLabel: 'Allow Notifications',
-      laterLabel: 'Not Now',
-    },
-  },
   webBridge: {
     enabled: true,
     allowedMessageTypes: ['openPhone', 'openEmail', 'openMap', 'openExternal', 'share', 'openNative'],
     maxMessageLength: 8192,
   },
-  storage: {namespace: 'demo-example-works'},
   features: {
     webContent: true,
-    notifications: false,
     contact: true,
     location: true,
     sharing: true,

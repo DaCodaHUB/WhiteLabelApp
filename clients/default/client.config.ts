@@ -25,24 +25,13 @@ export const clientConfig: ClientConfig = {
     ],
   },
   contact: {},
-  notifications: {
-    permissionPrompt: {
-      enabled: true,
-      title: 'Stay informed',
-      message: 'Enable notifications to receive useful updates from this app.',
-      allowLabel: 'Allow Notifications',
-      laterLabel: 'Not Now',
-    },
-  },
   webBridge: {
     enabled: false,
     allowedMessageTypes: [],
     maxMessageLength: 8192,
   },
-  storage: {namespace: 'default-client'},
   features: {
     webContent: true,
-    notifications: false,
     contact: false,
     location: false,
     sharing: false,

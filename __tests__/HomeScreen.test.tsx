@@ -12,16 +12,18 @@ jest.mock('react-native-safe-area-context', () => { const {View} = require('reac
 jest.mock('../src/presentation/hooks/useHomeActionExecutor', () => ({useHomeActionExecutor: jest.fn()}));
 
 const mockUseExecutor = jest.mocked(useHomeActionExecutor);
+const navigate = jest.fn();
 const execute = jest.fn(async () => undefined);
 
 beforeEach(() => {
   execute.mockClear();
+  navigate.mockClear();
   mockUseExecutor.mockReturnValue({execute, executingActionId: undefined, errorMessage: undefined});
 });
 
 function renderHome(config: ClientConfig = defaultConfig) {
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
-  ReactTestRenderer.act(() => { renderer = ReactTestRenderer.create(<ClientConfigProvider config={config}><ThemeProvider><HomeScreen /></ThemeProvider></ClientConfigProvider>); });
+  ReactTestRenderer.act(() => { renderer = ReactTestRenderer.create(<ClientConfigProvider config={config}><ThemeProvider><HomeScreen navigation={{navigate}} /></ThemeProvider></ClientConfigProvider>); });
   if (!renderer) throw new Error('Renderer was not created.');
   return renderer;
 }
@@ -77,4 +79,10 @@ test('hides phone, email, and maps actions when contact and location are disable
   ]}};
   const renderer = renderHome(config);
   for (const title of ['Call', 'Email', 'Maps']) expect(renderer.root.findAllByProps({accessibilityLabel: title})).toHaveLength(0);
+});
+
+test('opens Test Lab through the Home screen navigator', () => {
+  const renderer = renderHome();
+  ReactTestRenderer.act(() => renderer.root.findByProps({accessibilityLabel: 'Open Test Lab'}).props.onPress());
+  expect(navigate).toHaveBeenCalledWith('TestLab');
 });

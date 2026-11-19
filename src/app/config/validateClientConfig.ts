@@ -5,7 +5,6 @@ import {requiredFeatureForHomeAction} from './featureAvailability';
 const HEX_COLOR = /^#[0-9A-Fa-f]{6}(?:[0-9A-Fa-f]{2})?$/;
 const WEB_BRIDGE_TYPES: ReadonlySet<WebBridgeMessageType> = new Set([
   'openPhone', 'openEmail', 'openMap', 'openExternal', 'share', 'openNative',
-  'identifyNotificationUser', 'clearNotificationUser',
 ]);
 
 function requireText(value: string, field: string) {
@@ -52,8 +51,6 @@ export function validateClientConfig(config: ClientConfig): void {
       throw new Error(`Invalid client configuration: branding.${name} must be a hexadecimal color.`);
     }
   }
-
-  requireText(config.storage.namespace, 'storage.namespace');
 
   if (config.webBridge) {
     if (config.webBridge.enabled && !config.features.webContent) {
@@ -119,15 +116,6 @@ export function validateClientConfig(config: ClientConfig): void {
     }
   }
 
-  if (config.features.notifications && !config.notifications.oneSignalAppId?.trim()) {
-    throw new Error('Invalid client configuration: notifications.oneSignalAppId is required when notifications are enabled.');
-  }
-  if (config.notifications.permissionPrompt.enabled) {
-    requireText(config.notifications.permissionPrompt.title, 'notifications.permissionPrompt.title');
-    requireText(config.notifications.permissionPrompt.message, 'notifications.permissionPrompt.message');
-    requireText(config.notifications.permissionPrompt.allowLabel, 'notifications.permissionPrompt.allowLabel');
-    requireText(config.notifications.permissionPrompt.laterLabel, 'notifications.permissionPrompt.laterLabel');
-  }
   if (config.features.location && !config.contact.address && !config.contact.mapUrl) {
     throw new Error('Invalid client configuration: an address or map URL is required when location is enabled.');
   }
