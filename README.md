@@ -1,33 +1,21 @@
 # WhiteLabelApp
 
-A hosted webpage opens Android's native share sheet through a capability-checked React Native WebView bridge. The same app code ships as **Demo**, which exposes that bridge, and **Sample Cafe**, a separately branded Android app with a native Home and an independently hosted café site.
+**One React Native codebase, two Android applications.** Demo exposes a capability-checked bridge from hosted content to Android actions. Sample Cafe uses the same implementation to deliver a branded native Home and an independently hosted café menu. Each app has its own Android application ID, artwork, and feature configuration.
 
 | Client | What to look for | Android application ID |
 | --- | --- | --- |
-| **Demo** | Open **View Portfolio → Native Bridge** to see a webpage request a native action and receive the correlated result. [Hosted bridge page](https://dacodahub.github.io/mobile-demo/bridge.html) | `com.dacodahub.whitelabel.demo` |
-| **Sample Cafe** | Open **View Menu** on native Home to see the hosted menu inside a branded WebView. [Hosted café](https://dacodahub.github.io/mobile-demo/sample-cafe/) | `com.whitelabel.samplecafe` |
+| **Demo** | Technical showcase for WebView navigation and authorized native actions. [Hosted bridge page](https://dacodahub.github.io/mobile-demo/bridge.html) | `com.dacodahub.whitelabel.demo` |
+| **Sample Cafe** | Customer-facing café experience with branded native Home and a hosted menu. [Hosted café](https://dacodahub.github.io/mobile-demo/sample-cafe/) | `com.whitelabel.samplecafe` |
 
 ## Visual showcase
 
-| Sample Cafe native Home | Hosted menu in the Android WebView |
+| Demo Android app | Sample Cafe Android app |
 | --- | --- |
-| <img src="assets/readme/sample-cafe-native-home.png" width="280" alt="Sample Cafe native Home with the cup-and-steam logo and View Menu button"> | <img src="assets/readme/sample-cafe-menu.png" width="280" alt="Hosted Sample Cafe menu with the native Back control, categories, and coffee prices"> |
+| **Screenshot pending.** Capture native Home with **View Portfolio** visible, at the same device size as Sample Cafe. | <img src="assets/readme/sample-cafe-native-home.png" width="280" alt="Sample Cafe native Home with the cup-and-steam logo and View Menu button"> |
 
-### Additional captures planned
+**From native Home to hosted content.** Sample Cafe's **View Menu** action opens the independently deployed menu and keeps a native Back control visible.
 
-| Capture | What to show | Proposed asset |
-| --- | --- | --- |
-| Sample Cafe hosted homepage | Coffee hero and **View Menu** at mobile width. [Open homepage](https://dacodahub.github.io/mobile-demo/sample-cafe/) | `assets/readme/sample-cafe-hosted-home.png` |
-| Native-to-web navigation | Tap **View Menu**, show the hosted menu, then use native Back | `assets/readme/sample-cafe-navigation.mp4` |
-| Demo Native Share | Tap **Open native share sheet**, show the Android chooser, then return to the matching response | `assets/readme/demo-native-share.mp4` |
-
-## Engineering highlights
-
-- **Two Android apps from one codebase.** Each client owns its runtime config, native identifiers, environment values, and source artwork. Preparation validates the selection and deterministically generates the active TypeScript module, Android metadata, launcher and splash resources, and runtime logo. Both builds share the same Kotlin source namespace and Gradle project.
-- **A bounded WebView bridge.** Demo's top-frame wrapper adds a native-generated capability scoped to the WebView. The app checks the capability, reported URL and current page, request size and schema, allowed action types, and feature flags. Sample Cafe leaves the bridge disabled.
-- **Native Share with a correlated result.** The V1 `share` request carries an ID. The app combines text and HTTPS URL for the Android chooser and dispatches a safe `freelanceAppBridgeResponse` event containing the matching `requestId`. Recent IDs are deduplicated in memory.
-- **Independent web deployment.** GitHub Pages serves both websites from a separate repository. The apps load configured HTTPS destinations and can launch supported external links through the system.
-- **Native navigation and recovery.** React Navigation owns the screen stack. Android hardware Back consumes WebView history first when available. The WebView handles loading, progress, page and renderer errors, and retry.
+<img src="assets/readme/sample-cafe-menu.png" width="280" alt="Hosted Sample Cafe menu inside the Android WebView with native Back, categories, and coffee prices">
 
 ## Architecture
 
@@ -35,17 +23,20 @@ A hosted webpage opens Android's native share sheet through a capability-checked
 flowchart LR
     Config["Client configurations and artwork"] --> Prepare["Client preparation"]
     Prepare --> App["Shared React Native app"]
-    App --> WebView["WebView and navigation policy"]
-    WebView --> Demo["Demo site on GitHub Pages"]
-    WebView --> Cafe["Sample Cafe site on GitHub Pages"]
-    Demo --> Bridge["V1 bridge: capability and policy checks"]
+    App --> DemoApp["Demo Android app"]
+    App --> CafeApp["Sample Cafe Android app"]
+    DemoApp -->|WebView| Demo["Demo site on GitHub Pages"]
+    CafeApp -->|WebView| Cafe["Sample Cafe site on GitHub Pages"]
+    Demo --> Bridge["Authorized V1 bridge"]
     Bridge --> Native["Native Share, linking, or Settings"]
     Bridge -.->|Correlated response| Demo
-    App --> Actions["Native Home actions"]
-    Actions --> Native
+    CafeApp -->|Native Home actions| CafeNative["Call and directions"]
 ```
 
-The diagram shows Demo's website-to-native request path. Sample Cafe loads hosted content and runs its Call and Directions actions from native Home. See the [client definitions](clients/), [WebView shell](src/presentation/webview/), [bridge parser and executor](src/app/webBridge/), and [platform adapters](src/infrastructure/).
+- **Client selection happens before bundling and build.** Preparation validates one client and deterministically generates the active TypeScript module, Android metadata, launcher and splash artwork, and runtime logo. Both builds share a Kotlin source namespace and Gradle project. [Client definitions](clients/) · [Preparation script](scripts/clientPrepare.js)
+- **Web content deploys independently.** Both apps load configured HTTPS destinations in the shared WebView. React Navigation owns the native stack, and Android hardware Back uses WebView history when available. The shell handles loading, page and renderer errors, and retry. [WebView shell](src/presentation/webview/)
+- **Native capabilities are granted per client.** Demo's top-frame wrapper attaches a native-generated capability scoped to the WebView. The app checks the capability, reported and current page URLs, payload size and schema, permitted action types, and feature flags. Sample Cafe keeps the bridge disabled and exposes Call and Directions through native Home. [Bridge implementation](src/app/webBridge/)
+- **Native Share demonstrates the round trip.** A V1 `share` request carries an ID, text, and an HTTPS URL. Android opens the system chooser and the page receives a safe `freelanceAppBridgeResponse` carrying the original `requestId`. Recent IDs are deduplicated. The response confirms chooser launch. Android provides no reliable delivery or dismissal signal. [Share adapter](src/infrastructure/sharing/ReactNativeShareService.ts)
 
 ## Technology stack
 
@@ -103,7 +94,13 @@ npm test -- --runInBand
 | **Android builds** | Debug APK builds were validated for Demo and Sample Cafe on ARM64. Sample Cafe also built for x86_64. Build success verifies compilation and packaging. |
 | **Physical Android** | On a Pixel 3a, a request sent through the authorized wrapper from the hosted page opened the system chooser with both text and URL. The matching request ID returned with **Share sheet opened.** That device run used the wrapper from WebView DevTools. |
 
-To verify the current hosted button with the app, open **View Portfolio → Native Bridge**, tap **Open native share sheet**, confirm the chooser preview, and press Back. The page should display **Share sheet opened.** for the same request ID. Android reports chooser launch and gives no reliable dismissal or delivery signal.
+To try the hosted button in Demo, open **View Portfolio → Native Bridge**, tap **Open native share sheet**, and confirm the chooser preview and the correlated result after returning to the page.
+
+## Known limitations
+
+- An intermittent Android startup `SIGSEGV` in Fabric mounting was observed on a Pixel 3a. The trigger and root cause remain unresolved.
+- The bridge trusts scripts running in the authorized top-level page. Its configured host policy includes matching subdomains.
+- WhiteLabelApp is a portfolio engineering showcase. Android debug builds are the focus of validation. Production signing and iOS device behavior are outside that validation.
 
 ## Related repository
 
