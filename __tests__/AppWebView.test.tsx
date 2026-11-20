@@ -25,9 +25,9 @@ jest.mock('react-native-webview', () => {
   };
 });
 
-function renderWebView(linking: ExternalLinking = {canOpenUrl: jest.fn(async () => true), openUrl: jest.fn(async () => undefined)}, bridge?: React.ComponentProps<typeof AppWebView>['bridge']) {
+function renderWebView(linking: ExternalLinking = {canOpenUrl: jest.fn(async () => true), openUrl: jest.fn(async () => undefined)}, bridge?: React.ComponentProps<typeof AppWebView>['bridge'], cafePresentation = false) {
   let renderer: ReactTestRenderer.ReactTestRenderer | undefined;
-  ReactTestRenderer.act(() => { renderer = ReactTestRenderer.create(<ClientConfigProvider config={defaultConfig}><ThemeProvider><AppWebView initialUrl="https://example.com" allowedDomains={['example.com']} linking={linking} bridge={bridge} /></ThemeProvider></ClientConfigProvider>); });
+  ReactTestRenderer.act(() => { renderer = ReactTestRenderer.create(<ClientConfigProvider config={defaultConfig}><ThemeProvider><AppWebView initialUrl="https://example.com" allowedDomains={['example.com']} linking={linking} bridge={bridge} cafePresentation={cafePresentation} /></ThemeProvider></ClientConfigProvider>); });
   if (!renderer) throw new Error('Renderer was not created.');
   return renderer;
 }
@@ -50,6 +50,22 @@ test('allows internal links and prevents external links from loading', async () 
   expect(webNode(renderer).props.onShouldStartLoadWithRequest({url: 'https://outside.test'})).toBe(false);
   await ReactTestRenderer.act(async () => {});
   expect(linking.openUrl).toHaveBeenCalledWith('https://outside.test/');
+});
+
+test('Sample Cafe uses one loading treatment on entry and retry', () => {
+  mockReload.mockClear();
+  const renderer = renderWebView(undefined, undefined, true);
+  const webView = webNode(renderer);
+  expect(renderer.root.findByProps({accessibilityLabel: 'Loading Sample Cafe'})).toBeTruthy();
+  expect(renderer.root.findAllByProps({testID: 'web-progress'})).toHaveLength(0);
+  ReactTestRenderer.act(() => webView.props.onError({nativeEvent: {}}));
+  expect(renderer.root.findByProps({children: 'Page unavailable'}).props.accessibilityRole).toBe('header');
+  ReactTestRenderer.act(() => renderer.root.findByProps({accessibilityLabel: 'Try again'}).props.onPress());
+  expect(mockReload).toHaveBeenCalledTimes(1);
+  expect(renderer.root.findByProps({accessibilityLabel: 'Loading Sample Cafe'})).toBeTruthy();
+  expect(renderer.root.findAllByProps({testID: 'web-progress'})).toHaveLength(0);
+  ReactTestRenderer.act(() => webView.props.onLoadEnd());
+  expect(renderer.root.findAllByProps({accessibilityLabel: 'Loading Sample Cafe'})).toHaveLength(0);
 });
 
 test('main-frame error displays safe feedback and retry reloads', () => {

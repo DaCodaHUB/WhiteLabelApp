@@ -12,6 +12,7 @@ export type WebViewErrorState = {title: string; message: string} | undefined;
 export type AppWebViewProps = {
   initialUrl: string;
   allowedDomains: string[];
+  cafePresentation?: boolean;
   linking?: ExternalLinking;
   bridge?: {enabled: boolean; maxMessageLength: number; handleMessage: WebBridgeHandler};
 };

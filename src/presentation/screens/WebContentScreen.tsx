@@ -41,5 +41,5 @@ export function WebContentScreen({route}: Props) {
   }
 
   if (config.webBridge?.enabled) return <BridgeEnabledWebView uri={uri} />;
-  return <AppWebView initialUrl={uri} allowedDomains={website.allowedDomains} />;
+  return <AppWebView initialUrl={uri} allowedDomains={website.allowedDomains} cafePresentation={config.clientId === 'sample-cafe'} />;
 }

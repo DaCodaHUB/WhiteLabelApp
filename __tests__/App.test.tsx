@@ -30,7 +30,10 @@ test('starts on the configured Home screen without mounting WebView', async () =
   });
   if (!renderer) throw new Error('App did not render.');
   try {
-    expect(renderer.root.findAllByProps({children: activeClientConfig.home.title ?? activeClientConfig.appName}).length).toBeGreaterThan(0);
+    const homeHeading = activeClientConfig.clientId === 'sample-cafe'
+      ? 'Coffee made for slow mornings.'
+      : activeClientConfig.home.title ?? activeClientConfig.appName;
+    expect(renderer.root.findAllByProps({children: homeHeading}).length).toBeGreaterThan(0);
     expect(WebView).not.toHaveBeenCalled();
   } finally {
     const mountedApp = renderer;

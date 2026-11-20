@@ -13,7 +13,7 @@ import {evaluateWebRequest} from './webRequestPolicy';
 
 const DEDUPE_WINDOW_MS = 30_000;
 
-export function AppWebView({initialUrl, allowedDomains, linking = reactNativeLinking, bridge}: AppWebViewProps) {
+export function AppWebView({initialUrl, allowedDomains, linking = reactNativeLinking, bridge, cafePresentation = false}: AppWebViewProps) {
   const theme = useAppTheme();
   const controller = useWebViewController(initialUrl, allowedDomains, linking);
   const handledIds = useRef(new Map<string, number>());
@@ -42,8 +42,13 @@ export function AppWebView({initialUrl, allowedDomains, linking = reactNativeLin
       // Bridge failures are intentionally silent in native UI.
     }
   }, [allowedDomains, bridge, controller]);
+  const cafeCanvas = cafePresentation ? {backgroundColor: theme.colors.background} : undefined;
+  const progressTrack = cafePresentation ? styles.cafeProgressTrack : {backgroundColor: theme.colors.border};
+  const showLoading = controller.isInitialLoading || (cafePresentation && controller.isRetrying);
+  const showProgress = controller.progress < 1 &&
+    (!cafePresentation || (!showLoading && !controller.error));
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, cafeCanvas]}>
       <WebView
         ref={controller.webViewRef}
         source={{uri: initialUrl}}
@@ -79,13 +84,14 @@ export function AppWebView({initialUrl, allowedDomains, linking = reactNativeLin
         setSupportMultipleWindows={false}
         webviewDebuggingEnabled={__DEV__}
         overScrollMode="content"
-        style={styles.webView}
+        style={[styles.webView, cafeCanvas]}
+        containerStyle={cafeCanvas}
       />
-      {controller.progress < 1 && <View testID="web-progress" style={[styles.progressTrack, {backgroundColor: theme.colors.border}]}><View style={[styles.progress, {backgroundColor: theme.colors.primary, width: `${controller.progress * 100}%`}]} /></View>}
-      {controller.isInitialLoading && !controller.error && <View style={[styles.overlay, {backgroundColor: theme.colors.background}]}><LoadingState message="Loading page" /></View>}
-      {controller.error && <View style={[styles.overlay, {backgroundColor: theme.colors.background}]}><ErrorState title={controller.error.title} message={controller.error.message} onRetry={controller.retry} />{controller.isRetrying && <AppText color="textSecondary">Retrying…</AppText>}</View>}
+      {showProgress && <View testID="web-progress" style={[styles.progressTrack, progressTrack]}><View style={[styles.progress, {backgroundColor: theme.colors.primary, width: `${controller.progress * 100}%`}]} /></View>}
+      {showLoading && !controller.error && <View style={[styles.overlay, {backgroundColor: theme.colors.background}]}><LoadingState message={cafePresentation ? 'Loading Sample Cafe' : 'Loading page'} announce={cafePresentation} /></View>}
+      {controller.error && <View style={[styles.overlay, {backgroundColor: theme.colors.background}]}><ErrorState title={controller.error.title} message={controller.error.message} onRetry={controller.retry} announce={cafePresentation} />{controller.isRetrying && <AppText color="textSecondary">Retrying…</AppText>}</View>}
     </View>
   );
 }
 
-const styles = StyleSheet.create({root: {flex: 1}, webView: {flex: 1}, overlay: {bottom: 0, left: 0, position: 'absolute', right: 0, top: 0, alignItems: 'center', justifyContent: 'center', padding: 16}, progressTrack: {height: 2, left: 0, position: 'absolute', right: 0, top: 0}, progress: {height: 2}});
+const styles = StyleSheet.create({root: {flex: 1}, webView: {flex: 1}, overlay: {bottom: 0, left: 0, position: 'absolute', right: 0, top: 0, alignItems: 'center', justifyContent: 'center', padding: 16}, progressTrack: {height: 2, left: 0, position: 'absolute', right: 0, top: 0}, cafeProgressTrack: {backgroundColor: '#EADBC7'}, progress: {height: 2}});

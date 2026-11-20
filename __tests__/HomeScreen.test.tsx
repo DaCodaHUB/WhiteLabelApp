@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 import {defaultConfig} from '../src/app/config/defaultConfig';
+import {clientConfig as sampleCafe} from '../clients/sample-cafe/client.config';
 import type {ClientConfig} from '../src/app/config/types';
 import {ClientConfigProvider} from '../src/app/providers/ClientConfigProvider';
 import {HomeScreen} from '../src/presentation/screens/HomeScreen';
@@ -85,4 +86,17 @@ test('opens Test Lab through the Home screen navigator', () => {
   const renderer = renderHome();
   ReactTestRenderer.act(() => renderer.root.findByProps({accessibilityLabel: 'Open Test Lab'}).props.onPress());
   expect(navigate).toHaveBeenCalledWith('TestLab');
+});
+
+test('Sample Cafe prioritizes the menu and preserves all configured actions', async () => {
+  const renderer = renderHome(sampleCafe);
+  expect(renderer.root.findByProps({children: 'Coffee made for slow mornings.'}).props.accessibilityRole).toBe('header');
+  const buttons = renderer.root.findAll(node => typeof node.type === 'string' && node.props.accessibilityRole === 'button');
+  expect(buttons.map(button => button.props.accessibilityLabel).slice(0, 5))
+    .toEqual(['View Menu', 'Visit Sample Cafe', 'Call Us', 'Directions', 'Settings']);
+  const menuButton = renderer.root.findAllByProps({accessibilityLabel: 'View Menu'})
+    .find(node => typeof node.props.onPress === 'function');
+  if (!menuButton) throw new Error('Expected a pressable menu action.');
+  await ReactTestRenderer.act(async () => { await menuButton.props.onPress(); });
+  expect(execute).toHaveBeenCalledWith(sampleCafe.home.actions.find(action => action.id === 'menu'));
 });

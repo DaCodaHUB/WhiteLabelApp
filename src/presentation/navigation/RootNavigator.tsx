@@ -18,6 +18,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export function RootNavigator() {
   const config = useClientConfig();
   const appTheme = useAppTheme();
+  const isSampleCafe = config.clientId === 'sample-cafe';
   const theme = {
     ...DefaultTheme,
     colors: {
@@ -36,13 +37,18 @@ export function RootNavigator() {
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          options={{title: config.appName}}
+          options={{title: config.appName, ...(isSampleCafe ? {headerShown: false} : {})}}
         />
         {config.features.webContent && (
           <Stack.Screen
             name="WebContent"
             component={WebContentScreen}
-            options={({route}) => ({title: route.params.title ?? 'Web content'})}
+            options={({route}) => isSampleCafe ? {
+              title: route.params.title === 'View Menu' ? 'Menu' : 'Website',
+              headerStyle: {backgroundColor: appTheme.colors.background},
+              headerTintColor: appTheme.colors.textPrimary,
+              headerShadowVisible: false,
+            } : {title: route.params.title ?? 'Web content'}}
           />
         )}
         {config.features.settings && (
