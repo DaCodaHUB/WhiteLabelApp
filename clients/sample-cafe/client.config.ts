@@ -29,9 +29,9 @@ export const clientConfig = {
     ],
   },
   contact: {
-    phone: '+12025550142',
-    email: 'hello@sample-cafe.example',
-    address: '123 Placeholder Lane, Example City',
+    phone: '+15035550147',
+    email: 'hello@samplecafe.example',
+    address: '123 Sample Street, Portland, OR 97205',
   },
   webBridge: {enabled: false, allowedMessageTypes: [], maxMessageLength: 8192},
   features: {
