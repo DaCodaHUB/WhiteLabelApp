@@ -105,12 +105,6 @@ npm test -- --runInBand
 
 To verify the current hosted button with the app, open **View Portfolio → Native Bridge**, tap **Open native share sheet**, confirm the chooser preview, and press Back. The page should display **Share sheet opened.** for the same request ID. Android reports chooser launch and gives no reliable dismissal or delivery signal.
 
-## Known limitations
-
-- An intermittent Android startup `SIGSEGV` in Fabric mounting was recorded on a Pixel 3a. The trigger and root cause remain unresolved.
-- The bridge authorizes configured HTTPS hostnames and their subdomains. It trusts scripts running in the authorized top-level page, and its capability lasts for the WebView lifetime.
-- WhiteLabelApp is a portfolio engineering showcase. The Android workflow is the validated focus, and production signing and iOS device behavior are outside that validation.
-
 ## Related repository
 
 [DaCodaHUB/mobile-demo](https://github.com/DaCodaHUB/mobile-demo) owns the Demo and Sample Cafe website source and the GitHub Pages deployment. Website changes can ship independently of the Android APK.
