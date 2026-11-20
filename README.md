@@ -9,9 +9,12 @@
 
 ## Visual showcase
 
-| Demo Android app | Sample Cafe Android app |
-| --- | --- |
-| **Screenshot pending.** Capture native Home with **View Portfolio** visible, at the same device size as Sample Cafe. | <img src="assets/readme/sample-cafe-native-home.png" width="280" alt="Sample Cafe native Home with the cup-and-steam logo and View Menu button"> |
+**Native Home screens** · Demo (left) and Sample Cafe (right). Select either screenshot to see it full size.
+
+<p>
+  <a href="assets/readme/demo-native-home.png"><img src="assets/readme/demo-native-home.png" width="46%" align="top" alt="Demo native Home with the View Portfolio action"></a>
+  <a href="assets/readme/sample-cafe-native-home.png"><img src="assets/readme/sample-cafe-native-home.png" width="46%" align="top" alt="Sample Cafe native Home with the cup-and-steam logo and View Menu button"></a>
+</p>
 
 **From native Home to hosted content.** Sample Cafe's **View Menu** action opens the independently deployed menu and keeps a native Back control visible.
 
